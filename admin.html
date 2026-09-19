@@ -1,0 +1,539 @@
+<!DOCTYPE html>
+<html lang="id" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kelompok Ilmiah Remaja - Website Admin Khusus</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: {
+                            50: '#fef2f2',
+                            100: '#fee2e2',
+                            500: '#ef4444',
+                            600: '#dc2626',
+                            700: '#b91c1c',
+                            800: '#991b1b',
+                            900: '#7f1d1d',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- Google Fonts Poppins -->
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body { font-family: 'Poppins', sans-serif; }
+    </style>
+</head>
+<body class="bg-slate-900 text-white antialiased selection:bg-primary-500 selection:text-white min-h-screen">
+
+    <div id="admin-login-modal" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/90 backdrop-blur-md">
+        <div class="bg-slate-900 border border-slate-800 p-8 rounded-3xl max-w-md w-full mx-4 shadow-2xl relative">
+            <div class="text-center mb-6">
+                <div class="w-14 h-14 rounded-2xl bg-gradient-to-tr from-primary-700 to-primary-500 flex items-center justify-center text-white mx-auto mb-3 shadow-lg shadow-primary-500/30">
+                    <i class="fa-solid fa-lock text-2xl"></i>
+                </div>
+                <h3 class="text-xl font-bold text-white">Akses Website Admin Khusus</h3>
+                <p class="text-xs text-slate-300 mt-1">Masukkan kata sandi pengurus untuk membuka panel admin.</p>
+            </div>
+            <form onsubmit="handleAdminLogin(event)" class="space-y-4">
+                <div>
+                    <label class="block text-xs font-semibold uppercase text-slate-300 mb-2">Kata Sandi Admin</label>
+                    <input type="password" id="admin-password-input" required class="w-full px-4 py-3.5 rounded-xl bg-slate-800 border border-slate-700 text-white placeholder-slate-400 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500" placeholder="Masukkan password (cth: kirsmansa2026)...">
+                </div>
+                <button type="submit" class="w-full py-3.5 rounded-xl bg-gradient-to-r from-primary-500 to-red-600 hover:from-primary-600 hover:to-red-700 text-white font-bold text-sm shadow-lg shadow-primary-500/30 transition">
+                    Masuk ke Website Admin
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <div id="admin-dashboard-container" class="hidden min-h-screen flex flex-col">
+        <header class="bg-slate-800 border-b border-slate-700 px-6 py-4 flex flex-col sm:flex-row justify-between items-center gap-4 shadow-lg">
+            <div class="flex items-center space-x-4">
+                <div class="w-12 h-12 rounded-2xl bg-primary-600 flex items-center justify-center text-white text-xl shadow-md">
+                    <i class="fa-solid fa-shield-halved"></i>
+                </div>
+                <div>
+                    <h2 class="text-xl font-bold text-white">Website Khusus Admin KIR</h2>
+                    <p class="text-xs text-slate-300">Panel Terpisah Pengurus & Pembina Organisasi</p>
+                </div>
+            </div>
+            <div class="flex items-center space-x-3">
+                <a href="publik.html" target="_blank" class="px-4 py-2.5 rounded-xl bg-slate-700 hover:bg-slate-600 text-slate-100 text-sm font-semibold transition flex items-center space-x-2">
+                    <i class="fa-solid fa-globe"></i>
+                    <span>Buka Website Publik</span>
+                </a>
+                <button onclick="lockAdminSession()" class="px-4 py-2.5 rounded-xl bg-red-600/20 hover:bg-red-600 text-red-200 hover:text-white text-sm font-semibold transition flex items-center space-x-2 border border-red-500/30">
+                    <i class="fa-solid fa-right-from-bracket"></i>
+                    <span>Kunci Sesi Admin</span>
+                </button>
+            </div>
+        </header>
+
+        <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 space-y-12 flex-1 w-full">
+            <!-- Tabs Admin -->
+            <div class="flex space-x-2 border-b border-slate-700 pb-4 overflow-x-auto">
+                <button onclick="switchAdminTab('pendaftar')" id="tab-btn-pendaftar" class="px-6 py-3 rounded-xl font-bold text-sm bg-primary-600 text-white transition flex items-center space-x-2 shadow-lg shadow-primary-500/20 whitespace-nowrap">
+                    <i class="fa-solid fa-users-rectangle"></i>
+                    <span>Data Pendaftaran (<span id="admin-reg-count">0</span>)</span>
+                </button>
+                <button onclick="switchAdminTab('profil')" id="tab-btn-profil" class="px-6 py-3 rounded-xl font-bold text-sm bg-slate-800 text-slate-200 hover:bg-slate-700 transition flex items-center space-x-2 whitespace-nowrap">
+                    <i class="fa-solid fa-pen-to-square"></i>
+                    <span>Pengaturan Profil</span>
+                </button>
+                <button onclick="switchAdminTab('galeri')" id="tab-btn-galeri" class="px-6 py-3 rounded-xl font-bold text-sm bg-slate-800 text-slate-200 hover:bg-slate-700 transition flex items-center space-x-2 whitespace-nowrap">
+                    <i class="fa-solid fa-images"></i>
+                    <span>Kelola Galeri Foto</span>
+                </button>
+                <button onclick="switchAdminTab('pesan')" id="tab-btn-pesan" class="px-6 py-3 rounded-xl font-bold text-sm bg-slate-800 text-slate-200 hover:bg-slate-700 transition flex items-center space-x-2 whitespace-nowrap">
+                    <i class="fa-solid fa-comments"></i>
+                    <span>Kelola Pesan (<span id="admin-pesan-count">0</span>)</span>
+                </button>
+            </div>
+
+            <!-- Tab 1: Data Pendaftar -->
+            <div id="admin-tab-pendaftar" class="space-y-6">
+                <div class="flex justify-between items-center">
+                    <h3 class="text-xl font-bold text-white">Daftar Calon Anggota Masuk</h3>
+                    <span class="text-xs text-slate-300">Sinkronisasi Real-Time</span>
+                </div>
+
+                <div class="bg-slate-800 border border-slate-700 rounded-3xl overflow-hidden shadow-xl">
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left border-collapse">
+                            <thead>
+                                <tr class="bg-slate-900/50 text-slate-300 uppercase text-xs tracking-wider border-b border-slate-700">
+                                    <th class="p-4 sm:p-6">Nama & Kelas</th>
+                                    <th class="p-4 sm:p-6">Kontak</th>
+                                    <th class="p-4 sm:p-6">Alamat</th>
+                                    <th class="p-4 sm:p-6">Alasan Masuk</th>
+                                    <th class="p-4 sm:p-6 text-center">Aksi</th>
+                                </tr>
+                            </thead>
+                            <tbody id="admin-pendaftaran-table" class="divide-y divide-slate-700 text-sm">
+                                <tr>
+                                    <td colspan="5" class="p-8 text-center text-slate-300">Memuat data pendaftar...</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tab 2: Pengaturan Profil Website -->
+            <div id="admin-tab-profil" class="hidden space-y-6">
+                <div class="bg-slate-800 border border-slate-700 p-8 rounded-3xl shadow-xl max-w-3xl">
+                    <h3 class="text-xl font-bold mb-6 text-white">Ubah Profil & Identitas Website Publik</h3>
+                    <form onsubmit="saveProfileSettings(event)" class="space-y-6">
+                        <div>
+                            <label class="block text-xs font-semibold uppercase text-slate-300 mb-2">Nama Organisasi</label>
+                            <input type="text" id="admin-set-name" required class="w-full px-4 py-3 rounded-xl bg-slate-900 border border-slate-700 text-white text-sm focus:outline-none focus:ring-2 focus:ring-primary-500">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold uppercase text-slate-300 mb-2">Logo Organisasi (Pilih File dari Galeri Perangkat)</label>
+                            <input type="file" id="admin-set-logo-file" accept="image/*" class="w-full text-sm text-slate-300 file:mr-4 file:py-2.5 file:px-4 file:rounded-xl file:border-0 file:text-sm file:font-semibold file:bg-primary-600 file:text-white hover:file:bg-primary-500 cursor-pointer">
+                            <p class="text-xs text-slate-400 mt-2">Atau masukkan URL gambar logo:</p>
+                            <input type="text" id="admin-set-logo-url" class="w-full mt-1 px-4 py-2.5 rounded-xl bg-slate-900 border border-slate-700 text-white text-sm focus:outline-none focus:ring-2 focus:ring-primary-500" placeholder="https://...">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold uppercase text-slate-300 mb-2">Visi Organisasi</label>
+                            <textarea id="admin-set-visi" rows="3" required class="w-full px-4 py-3 rounded-xl bg-slate-900 border border-slate-700 text-white text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"></textarea>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold uppercase text-slate-300 mb-2">Misi Organisasi (Satu baris per poin)</label>
+                            <textarea id="admin-set-misi" rows="4" required class="w-full px-4 py-3 rounded-xl bg-slate-900 border border-slate-700 text-white text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"></textarea>
+                        </div>
+                        <button type="submit" class="px-6 py-3 rounded-xl bg-gradient-to-r from-primary-500 to-red-600 text-white font-bold text-sm shadow-lg shadow-primary-500/30">
+                            Simpan Perubahan Profil Publik
+                        </button>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Tab 3: Kelola Galeri Foto -->
+            <div id="admin-tab-galeri" class="hidden space-y-6">
+                <div class="bg-slate-800 border border-slate-700 p-8 rounded-3xl shadow-xl max-w-3xl mb-8">
+                    <h3 class="text-xl font-bold mb-6 text-white">Unggah Foto Kegiatan Baru dari Galeri</h3>
+                    <form onsubmit="uploadGalleryPhoto(event)" class="space-y-6">
+                        <div>
+                            <label class="block text-xs font-semibold uppercase text-slate-300 mb-2">Judul / Keterangan Foto</label>
+                            <input type="text" id="admin-photo-title" required class="w-full px-4 py-3 rounded-xl bg-slate-900 border border-slate-700 text-white text-sm focus:outline-none focus:ring-2 focus:ring-primary-500" placeholder="cth. Praktikum Titrasi Asam Basa">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold uppercase text-slate-300 mb-2">Pilih Berkas Foto (Galeri Komputer/HP)</label>
+                            <input type="file" id="admin-photo-file" accept="image/*" required class="w-full text-sm text-slate-300 file:mr-4 file:py-2.5 file:px-4 file:rounded-xl file:border-0 file:text-sm file:font-semibold file:bg-primary-600 file:text-white hover:file:bg-primary-500 cursor-pointer">
+                        </div>
+                        <button type="submit" class="px-6 py-3 rounded-xl bg-gradient-to-r from-primary-500 to-red-600 text-white font-bold text-sm shadow-lg shadow-primary-500/30">
+                            Unggah Foto ke Galeri Publik
+                        </button>
+                    </form>
+                </div>
+
+                <h3 class="text-xl font-bold text-white">Daftar Foto Galeri Saat Ini</h3>
+                <div id="admin-gallery-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                    <!-- Populated dynamically -->
+                </div>
+            </div>
+
+            <!-- Tab 4: Kelola Pesan -->
+            <div id="admin-tab-pesan" class="hidden space-y-6">
+                <div class="flex justify-between items-center">
+                    <h3 class="text-xl font-bold text-white">Kelola Pesan & Kesan Masuk</h3>
+                </div>
+                <div id="admin-pesan-list" class="space-y-4">
+                    <!-- Populated dynamically -->
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <div id="notification-modal" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/70 backdrop-blur-sm hidden">
+        <div class="bg-slate-900 border border-slate-800 p-8 rounded-3xl max-w-sm w-full mx-4 text-center shadow-2xl space-y-4">
+            <div id="notif-icon-container" class="w-16 h-16 rounded-full bg-primary-500/20 text-primary-500 flex items-center justify-center text-3xl mx-auto">
+                <i id="notif-icon" class="fa-solid fa-circle-check"></i>
+            </div>
+            <h4 id="notif-title" class="text-xl font-bold text-white">Berhasil!</h4>
+            <p id="notif-message" class="text-sm text-slate-200">Pesan notifikasi Anda di sini.</p>
+            <button onclick="closeNotification()" class="w-full py-3 rounded-xl bg-primary-600 hover:bg-primary-500 text-white font-bold text-sm transition">
+                Mengerti
+            </button>
+        </div>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, collection, addDoc, doc, setDoc, deleteDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        let app, db, auth, userId = null;
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'kir-official-app-2026';
+
+        const defaultProfile = {
+            name: "KIR SMANSA",
+            visi: "Menjadi wadah unggulan dalam mencetak generasi muda yang cerdas, kreatif, berkarakter ilmiah, serta mampu memberikan solusi inovatif bagi permasalahan masyarakat melalui riset dan teknologi.",
+            misi: "1. Mengembangkan minat dan bakat anggota di bidang penelitian ilmiah dasar dan terapan.\n2. Mengadakan pelatihan metodologi penelitian, karya tulis ilmiah, dan eksperimen laboratorium.\n3. Berpartisipasi aktif dalam ajang kompetisi sains dan pameran inovasi.",
+            logoUrl: ""
+        };
+
+        window.addEventListener('DOMContentLoaded', async () => {
+            try {
+                const firebaseConfig = JSON.parse(__firebase_config);
+                app = initializeApp(firebaseConfig);
+                db = getFirestore(app);
+                auth = getAuth(app);
+
+                if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                    await signInWithCustomToken(auth, __initial_auth_token);
+                } else {
+                    await signInAnonymously(auth);
+                }
+
+                onAuthStateChanged(auth, (user) => {
+                    if (user) {
+                        userId = user.uid;
+                        initRealtimeListeners();
+                    }
+                });
+            } catch (e) {
+                console.warn("Firebase initialization fallback active:", e);
+                userId = "offline-user";
+                initOfflineFallback();
+            }
+        });
+
+        function initRealtimeListeners() {
+            // Profile Listener
+            const profileRef = doc(db, 'artifacts', appId, 'public', 'data', 'settings');
+            onSnapshot(profileRef, (docSnap) => {
+                if (docSnap.exists()) {
+                    populateAdminProfile(docSnap.data());
+                } else {
+                    setDoc(profileRef, defaultProfile);
+                    populateAdminProfile(defaultProfile);
+                }
+            }, (err) => console.error("Profile sync error:", err));
+
+            // Pendaftaran Listener
+            const pendaftaranCol = collection(db, 'artifacts', appId, 'public', 'data', 'pendaftaran');
+            onSnapshot(pendaftaranCol, (snapshot) => {
+                const list = [];
+                snapshot.forEach(d => list.push({ id: d.id, ...d.data() }));
+                renderPendaftaranAdmin(list);
+            }, (err) => console.error("Pendaftaran sync error:", err));
+
+            // Galeri Listener
+            const galeriCol = collection(db, 'artifacts', appId, 'public', 'data', 'galeri');
+            onSnapshot(galeriCol, (snapshot) => {
+                const list = [];
+                snapshot.forEach(d => list.push({ id: d.id, ...d.data() }));
+                renderAdminGallery(list);
+            }, (err) => console.error("Galeri sync error:", err));
+
+            // Pesan Listener
+            const pesanCol = collection(db, 'artifacts', appId, 'public', 'data', 'pesan');
+            onSnapshot(pesanCol, (snapshot) => {
+                const list = [];
+                snapshot.forEach(d => list.push({ id: d.id, ...d.data() }));
+                list.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+                renderAdminPesan(list);
+            }, (err) => console.error("Pesan sync error:", err));
+        }
+
+        function initOfflineFallback() {
+            populateAdminProfile(defaultProfile);
+            renderAdminGallery([
+                { id: '1', title: 'Praktikum Kimia Organik', url: 'https://images.unsplash.com/photo-1532094349884-543bc11b234d?auto=format&fit=crop&w=800&q=80' }
+            ]);
+            renderAdminPesan([
+                { id: '1', nama: 'Budi Santoso', status: 'Alumni KIR', isi: 'KIR sangat membantu saya memahami riset ilmiah sejak bangku sekolah!', createdAt: Date.now() }
+            ]);
+            renderPendaftaranAdmin([]);
+        }
+
+        function populateAdminProfile(data) {
+            if (document.getElementById('admin-set-name')) {
+                document.getElementById('admin-set-name').value = data.name || '';
+                document.getElementById('admin-set-visi').value = data.visi || '';
+                document.getElementById('admin-set-misi').value = data.misi || '';
+                document.getElementById('admin-set-logo-url').value = data.logoUrl || '';
+            }
+        }
+
+        function renderAdminGallery(list) {
+            const adminGrid = document.getElementById('admin-gallery-grid');
+            const adminHtml = list.map(item => `
+                <div class="bg-slate-900 border border-slate-700 rounded-2xl overflow-hidden shadow-md flex flex-col justify-between">
+                    <div class="h-40 overflow-hidden relative">
+                        <img src="${item.url}" alt="${item.title}" class="w-full h-full object-cover" onerror="this.src='https://placehold.co/600x400/1e293b/ffffff?text=Foto'">
+                    </div>
+                    <div class="p-4 flex items-center justify-between">
+                        <p class="text-sm font-bold text-white truncate max-w-[180px]">${item.title}</p>
+                        <button onclick="deleteGalleryPhoto('${item.id}')" class="px-3 py-1.5 rounded-xl bg-red-600/20 hover:bg-red-600 text-red-200 hover:text-white text-xs font-semibold transition border border-red-500/30">
+                            <i class="fa-solid fa-trash"></i> Hapus
+                        </button>
+                    </div>
+                </div>
+            `).join('') || '<p class="text-slate-400 col-span-3 text-center py-4">Galeri kosong.</p>';
+
+            if (adminGrid) adminGrid.innerHTML = adminHtml;
+        }
+
+        function renderAdminPesan(list) {
+            const adminContainer = document.getElementById('admin-pesan-list');
+            const adminCountEl = document.getElementById('admin-pesan-count');
+
+            if (adminCountEl) adminCountEl.innerText = list.length;
+
+            const adminHtml = list.map(item => `
+                <div class="p-6 rounded-2xl bg-slate-800 border border-slate-700 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                    <div class="space-y-1">
+                        <div class="flex items-center space-x-2">
+                            <h4 class="font-bold text-white">${item.nama}</h4>
+                            <span class="px-2 py-0.5 rounded-full bg-slate-700 text-slate-200 text-xs">${item.status}</span>
+                        </div>
+                        <p class="text-slate-200 text-sm">${item.isi}</p>
+                    </div>
+                    <button onclick="deletePesan('${item.id}')" class="px-3 py-1.5 rounded-xl bg-red-600/20 hover:bg-red-600 text-red-200 hover:text-white text-xs font-semibold transition border border-red-500/30 whitespace-nowrap">
+                        <i class="fa-solid fa-trash"></i> Hapus Pesan
+                    </button>
+                </div>
+            `).join('') || '<p class="text-slate-400 text-center py-4">Tidak ada pesan.</p>';
+
+            if (adminContainer) adminContainer.innerHTML = adminHtml;
+        }
+
+        function renderPendaftaranAdmin(list) {
+            const tbody = document.getElementById('admin-pendaftaran-table');
+            const countEl = document.getElementById('admin-reg-count');
+            if (countEl) countEl.innerText = list.length;
+
+            if (!tbody) return;
+
+            if (list.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="5" class="p-8 text-center text-slate-400">Belum ada pendaftar masuk.</td></tr>`;
+                return;
+            }
+
+            tbody.innerHTML = list.map(item => `
+                <tr class="hover:bg-slate-700/50 transition">
+                    <td class="p-4 sm:p-6">
+                        <div class="font-bold text-white">${item.nama}</div>
+                        <div class="text-xs text-primary-400 font-semibold mt-0.5">Kelas: ${item.kelas}</div>
+                    </td>
+                    <td class="p-4 sm:p-6 text-slate-200">
+                        <div class="flex items-center space-x-2">
+                            <i class="fa-solid fa-phone text-xs text-slate-400"></i>
+                            <span>${item.telp}</span>
+                        </div>
+                    </td>
+                    <td class="p-4 sm:p-6 text-slate-200 text-sm">${item.alamat}</td>
+                    <td class="p-4 sm:p-6 text-slate-200 text-sm max-w-xs truncate">${item.alasan}</td>
+                    <td class="p-4 sm:p-6 text-center">
+                        <button onclick="deletePendaftaran('${item.id}')" class="px-3 py-1.5 rounded-xl bg-red-600/20 hover:bg-red-600 text-red-200 hover:text-white text-xs font-semibold transition border border-red-500/30" title="Hapus Data">
+                            <i class="fa-solid fa-trash"></i>
+                        </button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        window.handleAdminLogin = function(e) {
+            e.preventDefault();
+            const pass = document.getElementById('admin-password-input').value;
+            if (pass === 'kirsmansa2026' || pass === 'admin123') {
+                document.getElementById('admin-login-modal').classList.add('hidden');
+                document.getElementById('admin-dashboard-container').classList.remove('hidden');
+                showNotification("Akses Diberikan", "Selamat datang di Website Khusus Admin.");
+                document.getElementById('admin-password-input').value = '';
+            } else {
+                showNotification("Kata Sandi Salah", "Silakan masukkan kata sandi admin yang benar.", "error");
+            }
+        };
+
+        window.lockAdminSession = function() {
+            document.getElementById('admin-dashboard-container').classList.add('hidden');
+            document.getElementById('admin-login-modal').classList.remove('hidden');
+        };
+
+        window.switchAdminTab = function(tabName) {
+            ['pendaftar', 'profil', 'galeri', 'pesan'].forEach(t => {
+                const el = document.getElementById(`admin-tab-${t}`);
+                const btn = document.getElementById(`tab-btn-${t}`);
+                if (t === tabName) {
+                    el.classList.remove('hidden');
+                    btn.className = "px-6 py-3 rounded-xl font-bold text-sm bg-primary-600 text-white transition flex items-center space-x-2 shadow-lg shadow-primary-500/20 whitespace-nowrap";
+                } else {
+                    el.classList.add('hidden');
+                    btn.className = "px-6 py-3 rounded-xl font-bold text-sm bg-slate-800 text-slate-200 hover:bg-slate-700 transition flex items-center space-x-2 whitespace-nowrap";
+                }
+            });
+        };
+
+        window.saveProfileSettings = async function(e) {
+            e.preventDefault();
+            const name = document.getElementById('admin-set-name').value;
+            const visi = document.getElementById('admin-set-visi').value;
+            const misi = document.getElementById('admin-set-misi').value;
+            let logoUrl = document.getElementById('admin-set-logo-url').value;
+
+            const fileInput = document.getElementById('admin-set-logo-file');
+            if (fileInput.files && fileInput.files[0]) {
+                const reader = new FileReader();
+                reader.onload = async function(e) {
+                    logoUrl = e.target.result;
+                    await commitProfileUpdate({ name, visi, misi, logoUrl });
+                };
+                reader.readAsDataURL(fileInput.files[0]);
+                return;
+            }
+
+            await commitProfileUpdate({ name, visi, misi, logoUrl });
+        };
+
+        async function commitProfileUpdate(data) {
+            try {
+                if (db && userId) {
+                    const profileRef = doc(db, 'artifacts', appId, 'public', 'data', 'settings');
+                    await setDoc(profileRef, data, { merge: true });
+                }
+                showNotification("Berhasil!", "Profil dan identitas website publik berhasil diperbarui.");
+            } catch (err) {
+                console.error("Error updating profile:", err);
+                showNotification("Gagal", "Terjadi kesalahan saat menyimpan profil.", "error");
+            }
+        }
+
+        window.uploadGalleryPhoto = async function(e) {
+            e.preventDefault();
+            const title = document.getElementById('admin-photo-title').value;
+            const fileInput = document.getElementById('admin-photo-file');
+
+            if (fileInput.files && fileInput.files[0]) {
+                const reader = new FileReader();
+                reader.onload = async function(e) {
+                    const url = e.target.result;
+                    try {
+                        if (db && userId) {
+                            await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'galeri'), {
+                                title,
+                                url,
+                                createdAt: Date.now()
+                            });
+                        }
+                        showNotification("Berhasil Diunggah!", "Foto baru telah ditambahkan ke galeri publik.");
+                        document.getElementById('admin-photo-title').value = '';
+                        fileInput.value = '';
+                    } catch (err) {
+                        console.error("Error uploading photo:", err);
+                        showNotification("Gagal", "Terjadi kesalahan saat mengunggah foto.", "error");
+                    }
+                };
+                reader.readAsDataURL(fileInput.files[0]);
+            }
+        };
+
+        window.deleteGalleryPhoto = async function(id) {
+            try {
+                if (db && userId) {
+                    await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'galeri', id));
+                }
+                showNotification("Terhapus", "Foto berhasil dihapus dari galeri publik.");
+            } catch (err) {
+                console.error("Error deleting photo:", err);
+            }
+        };
+
+        window.deletePesan = async function(id) {
+            try {
+                if (db && userId) {
+                    await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'pesan', id));
+                }
+                showNotification("Terhapus", "Pesan berhasil dihapus.");
+            } catch (err) {
+                console.error("Error deleting pesan:", err);
+            }
+        };
+
+        window.deletePendaftaran = async function(id) {
+            try {
+                if (db && userId) {
+                    await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'pendaftaran', id));
+                }
+                showNotification("Terhapus", "Data pendaftaran berhasil dihapus.");
+            } catch (err) {
+                console.error("Error deleting pendaftaran:", err);
+            }
+        };
+
+        window.showNotification = function(title, message, type = 'success') {
+            document.getElementById('notif-title').innerText = title;
+            document.getElementById('notif-message').innerText = message;
+            const iconContainer = document.getElementById('notif-icon-container');
+            const icon = document.getElementById('notif-icon');
+
+            if (type === 'error') {
+                iconContainer.className = "w-16 h-16 rounded-full bg-red-500/20 text-red-500 flex items-center justify-center text-3xl mx-auto";
+                icon.className = "fa-solid fa-circle-exclamation";
+            } else {
+                iconContainer.className = "w-16 h-16 rounded-full bg-primary-500/20 text-primary-500 flex items-center justify-center text-3xl mx-auto";
+                icon.className = "fa-solid fa-circle-check";
+            }
+
+            document.getElementById('notification-modal').classList.remove('hidden');
+        };
+
+        window.closeNotification = function() {
+            document.getElementById('notification-modal').classList.add('hidden');
+        };
+    </script>
+</body>
+</html>
