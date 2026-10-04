@@ -1,0 +1,2825 @@
+
+src/
+App.jsx                       ← pengatur rute
+index.css                     ← warna & tema KIR
+lib/kir-constants.js          ← identitas & data tetap
+components/public/            ← Navbar, Footer, Hero, Profil, Kegiatan,
+Dokumentasi, Kontak, SectionTitle, Lightbox
+components/admin/AdminLayout.jsx
+pages/public/                 ← Home, Pendaftaran, PendaftaranBerhasil
+pages/admin/                  ← Login, Dashboard, Pendaftar, PendaftarDetail,
+Kegiatan, Dokumentasi, Profil, Informasi, Pengaturan
+base44/entities/                ← Pendaftar, Kegiatan, Dokumentasi,
+ProfilOrganisasi, PengaturanWebsite
+src/App.jsx
+import { Toaster } from "@/components/ui/toaster"
+import { QueryClientProvider } from '@tanstack/react-query'
+import { queryClientInstance } from '@/lib/query-client'
+import { BrowserRouter as Router, Route, Routes, Navigate } from 'react-router-dom';
+import PageNotFound from './lib/PageNotFound';
+import { AuthProvider, useAuth } from '@/lib/AuthContext';
+import UserNotRegisteredError from '@/components/UserNotRegisteredError';
+import ScrollToTop from './components/ScrollToTop';
+import ProtectedRoute from '@/components/ProtectedRoute';
+
+// Halaman publik
+import Home from '@/pages/public/Home';
+import Pendaftaran from '@/pages/public/Pendaftaran';
+import PendaftaranBerhasil from '@/pages/public/PendaftaranBerhasil';
+
+// Halaman admin
+import AdminLogin from '@/pages/admin/AdminLogin';
+import AdminLayout from '@/components/admin/AdminLayout';
+import AdminDashboard from '@/pages/admin/AdminDashboard';
+import AdminPendaftar from '@/pages/admin/AdminPendaftar';
+import AdminPendaftarDetail from '@/pages/admin/AdminPendaftarDetail';
+import AdminKegiatan from '@/pages/admin/AdminKegiatan';
+import AdminDokumentasi from '@/pages/admin/AdminDokumentasi';
+import AdminProfil from '@/pages/admin/AdminProfil';
+import AdminInformasi from '@/pages/admin/AdminInformasi';
+import AdminPengaturan from '@/pages/admin/AdminPengaturan';
+
+// Halaman auth boilerplate (terdaftar, tidak ditautkan dari publik)
+import Login from '@/pages/Login';
+import Register from '@/pages/Register';
+import ForgotPassword from '@/pages/ForgotPassword';
+import ResetPassword from '@/pages/ResetPassword';
+
+const AuthenticatedApp = () => {
+const { isLoadingAuth, isLoadingPublicSettings, authError, navigateToLogin } = useAuth();
+
+if (isLoadingPublicSettings || isLoadingAuth) {
+return (
+<div className="fixed inset-0 flex items-center justify-center">
+<div className="w-8 h-8 border-4 border-slate-200 border-t-slate-800 rounded-full animate-spin"></div>
+</div>
+);
+}
+
+if (authError) {
+if (authError.type === 'user_not_registered') {
+return <UserNotRegisteredError />;
+} else if (authError.type === 'auth_required') {
+navigateToLogin();
+return null;
+}
+}
+
+return (
+<Routes>
+{/* Website Publik */}
+<Route path="/" element={<Home />} />
+<Route path="/pendaftaran" element={<Pendaftaran />} />
+<Route path="/pendaftaran-berhasil" element={<PendaftaranBerhasil />} />
+
+{/* Auth boilerplate (tidak ditautkan dari navigasi publik) */}
+<Route path="/login" element={<Login />} />
+<Route path="/register" element={<Register />} />
+<Route path="/forgot-password" element={<ForgotPassword />} />
+<Route path="/reset-password" element={<ResetPassword />} />
+
+{/* Website Admin — login terpisah */}
+<Route path="/admin/login" element={<AdminLogin />} />
+
+{/* Website Admin — terlindungi autentikasi */}
+<Route element={<ProtectedRoute unauthenticatedElement={<Navigate to="/admin/login" replace />} />}>
+<Route path="/admin" element={<AdminLayout />}>
+<Route index element={<AdminDashboard />} />
+<Route path="pendaftar" element={<AdminPendaftar />} />
+<Route path="pendaftar/:id" element={<AdminPendaftarDetail />} />
+<Route path="kegiatan" element={<AdminKegiatan />} />
+<Route path="dokumentasi" element={<AdminDokumentasi />} />
+<Route path="profil" element={<AdminProfil />} />
+<Route path="informasi" element={<AdminInformasi />} />
+<Route path="pengaturan" element={<AdminPengaturan />} />
+</Route>
+</Route>
+
+<Route path="*" element={<PageNotFound />} />
+</Routes>
+);
+};
+
+
+function App() {
+
+return (
+<AuthProvider>
+<QueryClientProvider client={queryClientInstance}>
+<Router>
+<ScrollToTop />
+<AuthenticatedApp />
+</Router>
+<Toaster />
+</QueryClientProvider>
+</AuthProvider>
+)
+}
+
+export default App
+Skema data (base44/entities)
+Pendaftar.jsonc
+{
+"name": "Pendaftar",
+"type": "object",
+"properties": {
+"nama": { "type": "string", "minLength": 2, "maxLength": 100 },
+"kelas": { "type": "string" },
+"alamat": { "type": "string", "maxLength": 300 },
+"nomor_telepon": { "type": "string", "pattern": "^[0-9]{8,15}$" },
+"alasan": { "type": "string", "maxLength": 500 },
+"pesan_tambahan": { "type": "string", "maxLength": 500 }
+},
+"required": ["nama", "kelas", "alamat", "nomor_telepon", "alasan"],
+"rls": {
+"read": { "user_condition": { "role": "admin" } },
+"create": {},
+"update": { "user_condition": { "role": "admin" } },
+"delete": { "user_condition": { "role": "admin" } }
+}
+}
+Kegiatan.jsonc
+{
+"name": "Kegiatan",
+"type": "object",
+"properties": {
+"nama_kegiatan": { "type": "string", "minLength": 2, "maxLength": 150 },
+"deskripsi": { "type": "string", "maxLength": 1000 },
+"tanggal_kegiatan": { "type": "string", "format": "date" },
+"gambar": { "type": "string" }
+},
+"required": ["nama_kegiatan"],
+"rls": {
+"read": {},
+"create": { "user_condition": { "role": "admin" } },
+"update": { "user_condition": { "role": "admin" } },
+"delete": { "user_condition": { "role": "admin" } }
+}
+}
+Dokumentasi.jsonc
+{
+"name": "Dokumentasi",
+"type": "object",
+"properties": {
+"nama_file": { "type": "string", "maxLength": 200 },
+"hash_file": { "type": "string", "maxLength": 100 },
+"keterangan": { "type": "string", "maxLength": 300 },
+"foto_url": { "type": "string" }
+},
+"required": ["foto_url"],
+"rls": {
+"read": {},
+"create": { "user_condition": { "role": "admin" } },
+"update": { "user_condition": { "role": "admin" } },
+"delete": { "user_condition": { "role": "admin" } }
+}
+}
+ProfilOrganisasi.jsonc
+{
+"name": "ProfilOrganisasi",
+"type": "object",
+"properties": {
+"deskripsi": { "type": "string", "maxLength": 1000 },
+"visi": { "type": "string", "maxLength": 500 },
+"misi": { "type": "string", "maxLength": 1000 },
+"keunggulan": { "type": "string", "maxLength": 1000 }
+},
+"required": [],
+"rls": {
+"read": {},
+"create": { "user_condition": { "role": "admin" } },
+"update": { "user_condition": { "role": "admin" } },
+"delete": { "user_condition": { "role": "admin" } }
+}
+}
+PengaturanWebsite.jsonc
+{
+"name": "PengaturanWebsite",
+"type": "object",
+"properties": {
+"judul_website": { "type": "string", "maxLength": 100 },
+"deskripsi_hero": { "type": "string", "maxLength": 600 },
+"info_pendaftaran": { "type": "string", "maxLength": 600 },
+"info_kontak": { "type": "string", "maxLength": 600 },
+"instagram": { "type": "string", "maxLength": 300 },
+"footer_text": { "type": "string", "maxLength": 300 }
+},
+"required": [],
+"rls": {
+"read": {},
+"create": { "user_condition": { "role": "admin" } },
+"update": { "user_condition": { "role": "admin" } },
+"delete": { "user_condition": { "role": "admin" } }
+}
+}
+src/lib/kir-constants.js
+// Identitas dan data konstan KIR SMANCA
+
+export const LOGO_URL =
+"https://media.base44.com/images/public/user_6ac228e1f779d4834631696c/951cbf30d_1000398544.png";
+
+export const NAMA_ORGANISASI = "KIR SMANCA";
+export const NAMA_SEKOLAH = "UPTD SMAN 1 Campalagian";
+
+export const INSTAGRAM_URL =
+"https://www.instagram.com/kir.sman1campalagian?stkn=azlwbnAza2lhZjY3";
+
+// Foto dokumentasi asli yang diunggah pengguna (tanpa duplikasi)
+export const DOKUMENTASI_FOTO = [
+{
+url: "https://media.base44.com/images/public/user_6ac228e1f779d4834631696c/2b27f7419_1000398542.jpg",
+keterangan: "Praktikum di Laboratorium Kimia KIR SMANCA",
+},
+{
+url: "https://media.base44.com/images/public/user_6ac228e1f779d4834631696c/7906c60f1_1000398541.jpg",
+keterangan: "Silaturahmi & Pembinaan Ekstra Kurikuler Kimia — Oktober 2023",
+},
+{
+url: "https://media.base44.com/images/public/user_6ac228e1f779d4834631696c/6c22a7096_1000398543.jpg",
+keterangan: "Observasi lapangan ilmiah KIR SMANCA",
+},
+];
+
+// Pilihan kelas: X Merdeka 1-11, XI Merdeka 1-11
+export const KELAS_OPTIONS = [
+...Array.from({ length: 11 }, (_, i) => `X Merdeka ${i + 1}`),
+...Array.from({ length: 11 }, (_, i) => `XI Merdeka ${i + 1}`),
+];
+
+export const DEFAULT_PROFIL = {
+deskripsi:
+"Kelompok Ilmiah Remaja (KIR) SMANCA merupakan organisasi ekstrakurikuler yang menjadi wadah bagi peserta didik untuk mengembangkan kemampuan berpikir ilmiah, kreativitas, penelitian, dan inovasi.",
+visi: "Menjadi wadah penelitian dan inovasi pelajar yang berkarakter, kritis, dan berdaya saing di tingkat regional maupun nasional.",
+misi:
+"1. Mengembangkan kemampuan berpikir ilmiah dan kritis.\n2. Membangun kreativitas dan inovasi pelajar.\n3. Melatih keterampilan penelitian dan presentasi ilmiah.\n4. Membangun kerja sama dan jiwa kepemimpinan.",
+keunggulan: "Berpikir Kritis\nKreativitas dan Inovasi\nPenelitian Ilmiah",
+};
+
+export const DEFAULT_PENGATURAN = {
+judul_website: "KIR SMANCA",
+deskripsi_hero:
+"Selamat datang di website resmi Kelompok Ilmiah Remaja (KIR) SMANCA. Bergabunglah bersama kami untuk mengembangkan kreativitas, kemampuan berpikir kritis, keterampilan penelitian, serta semangat berinovasi dalam dunia ilmu pengetahuan.",
+info_pendaftaran:
+"Pendaftaran anggota baru KIR SMANCA dibuka untuk seluruh siswa UPTD SMAN 1 Campalagian. Silakan isi formulir pendaftaran secara lengkap.",
+info_kontak:
+"KIR SMANCA — UPTD SMAN 1 Campalagian. Hubungi kami melalui Instagram resmi.",
+instagram: INSTAGRAM_URL,
+footer_text: "© 2026 KIR SMANCA | UPTD SMAN 1 Campalagian — All Rights Reserved.",
+};
+
+// Helper: ambil record tunggal (profil/pengaturan) atau default
+export async function getSingleRecord(entity, fallback) {
+try {
+const page = await entity.filter({}, { limit: 1 });
+if (page.items && page.items.length > 0) return page.items[0];
+return { ...fallback, _missing: true };
+} catch {
+return { ...fallback, _missing: true };
+}
+}
+Halaman publik
+src/pages/public/Home.jsx
+import React, { useState, useEffect } from "react";
+import { base44 } from "@/api/base44Client";
+import { getSingleRecord, DEFAULT_PENGATURAN } from "@/lib/kir-constants";
+import PublicNavbar from "@/components/public/PublicNavbar";
+import PublicFooter from "@/components/public/PublicFooter";
+import HeroSection from "@/components/public/HeroSection";
+import ProfilSection from "@/components/public/ProfilSection";
+import KegiatanSection from "@/components/public/KegiatanSection";
+import DokumentasiSection from "@/components/public/DokumentasiSection";
+import KontakSection from "@/components/public/KontakSection";
+
+export default function Home() {
+const [pengaturan, setPengaturan] = useState(null);
+
+useEffect(() => {
+getSingleRecord(base44.entities.PengaturanWebsite, DEFAULT_PENGATURAN).then((p) => {
+setPengaturan(p._missing ? DEFAULT_PENGATURAN : p);
+});
+}, []);
+
+return (
+<div className="min-h-screen bg-white">
+<PublicNavbar />
+<main>
+<HeroSection pengaturan={pengaturan} />
+<ProfilSection />
+<KegiatanSection />
+<DokumentasiSection />
+<KontakSection pengaturan={pengaturan} />
+</main>
+<PublicFooter footerText={pengaturan?.footer_text} />
+</div>
+);
+}
+src/pages/public/Pendaftaran.jsx
+import React, { useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { base44 } from "@/api/base44Client";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import {
+Select,
+SelectTrigger,
+SelectValue,
+SelectContent,
+SelectItem,
+} from "@/components/ui/select";
+import { Loader2, Send, AlertCircle, ArrowLeft } from "lucide-react";
+import PublicNavbar from "@/components/public/PublicNavbar";
+import PublicFooter from "@/components/public/PublicFooter";
+import { KELAS_OPTIONS, LOGO_URL, NAMA_ORGANISASI, NAMA_SEKOLAH } from "@/lib/kir-constants";
+import { Image } from "@/components/ui/image";
+
+const INITIAL = {
+nama: "",
+kelas: "",
+alamat: "",
+nomor_telepon: "",
+alasan: "",
+pesan_tambahan: "",
+};
+
+export default function Pendaftaran() {
+const navigate = useNavigate();
+const [form, setForm] = useState(INITIAL);
+const [errors, setErrors] = useState({});
+const [submitting, setSubmitting] = useState(false);
+const [serverError, setServerError] = useState("");
+
+const validate = () => {
+const e = {};
+if (!form.nama.trim() || form.nama.trim().length < 2) e.nama = "Nama lengkap wajib diisi.";
+if (!form.kelas) e.kelas = "Pilih kelas Anda.";
+if (!form.alamat.trim()) e.alamat = "Alamat wajib diisi.";
+if (!form.nomor_telepon.trim()) e.nomor_telepon = "Nomor telepon wajib diisi.";
+else if (!/^[0-9]{8,15}$/.test(form.nomor_telepon.trim()))
+e.nomor_telepon = "Nomor telepon harus 8–15 digit angka.";
+if (!form.alasan.trim() || form.alasan.trim().length < 10)
+e.alasan = "Tuliskan alasan masuk organisasi (min. 10 karakter).";
+setErrors(e);
+return Object.keys(e).length === 0;
+};
+
+const handleChange = (field, value) => {
+setForm((f) => ({ ...f, [field]: value }));
+if (errors[field]) setErrors((er) => ({ ...er, [field]: undefined }));
+};
+
+const handlePhone = (e) => {
+const digits = e.target.value.replace(/[^0-9]/g, "").slice(0, 15);
+handleChange("nomor_telepon", digits);
+};
+
+const handleSubmit = async (e) => {
+e.preventDefault();
+setServerError("");
+if (submitting) return; // cegah pengiriman ganda
+if (!validate()) return;
+
+setSubmitting(true);
+try {
+await base44.entities.Pendaftar.create({
+nama: form.nama.trim(),
+kelas: form.kelas,
+alamat: form.alamat.trim(),
+nomor_telepon: form.nomor_telepon.trim(),
+alasan: form.alasan.trim(),
+pesan_tambahan: form.pesan_tambahan.trim() || undefined,
+});
+// sukses hanya jika database menyimpan
+navigate("/pendaftaran-berhasil");
+} catch (err) {
+setServerError(
+err?.message || "Terjadi kesalahan saat mengirim data. Silakan coba lagi."
+);
+} finally {
+setSubmitting(false);
+}
+};
+
+return (
+<div className="min-h-screen bg-white">
+<PublicNavbar />
+<main className="mx-auto max-w-3xl px-4 sm:px-6 lg:px-8 pt-28 pb-16 sm:pt-32">
+<button
+onClick={() => navigate("/")}
+className="inline-flex items-center gap-2 text-sm font-semibold text-kir-blue hover:text-kir-red mb-6"
+>
+<ArrowLeft className="h-4 w-4" />
+Kembali ke Beranda
+</button>
+
+<div className="text-center mb-8">
+<div className="h-20 w-20 mx-auto mb-4">
+<Image src={LOGO_URL} alt="Logo KIR SMANCA" fittingType="contain" className="h-full w-full object-contain" />
+</div>
+<h1 className="font-heading font-extrabold text-2xl sm:text-3xl text-kir-blue-dark">
+Pendaftaran Anggota Baru
+</h1>
+<p className="mt-2 text-muted-foreground">
+{NAMA_ORGANISASI} — {NAMA_SEKOLAH}
+</p>
+</div>
+
+<form
+onSubmit={handleSubmit}
+className="rounded-2xl border border-border bg-white shadow-card p-6 sm:p-8 space-y-5"
+>
+{serverError && (
+<div className="flex items-start gap-2 rounded-lg bg-destructive/10 p-3 text-sm text-destructive">
+<AlertCircle className="h-5 w-5 shrink-0 mt-0.5" />
+<span>{serverError}</span>
+</div>
+)}
+
+{/* A. Nama Lengkap */}
+<div className="space-y-2">
+<Label htmlFor="nama" className="text-sm font-semibold">
+A. Nama Lengkap <span className="text-kir-red">*</span>
+</Label>
+<Input
+id="nama"
+value={form.nama}
+maxLength={100}
+onChange={(e) => handleChange("nama", e.target.value)}
+placeholder="Masukkan nama lengkap"
+className="h-12"
+/>
+{errors.nama && <p className="text-xs text-destructive">{errors.nama}</p>}
+</div>
+
+{/* B. Kelas */}
+<div className="space-y-2">
+<Label className="text-sm font-semibold">
+B. Kelas <span className="text-kir-red">*</span>
+</Label>
+<Select value={form.kelas} onValueChange={(v) => handleChange("kelas", v)}>
+<SelectTrigger className="h-12 w-full">
+<SelectValue placeholder="Pilih kelas Anda" />
+</SelectTrigger>
+<SelectContent className="max-h-72">
+{KELAS_OPTIONS.map((k) => (
+<SelectItem key={k} value={k}>
+{k}
+</SelectItem>
+))}
+</SelectContent>
+</Select>
+{errors.kelas && <p className="text-xs text-destructive">{errors.kelas}</p>}
+</div>
+
+{/* C. Alamat */}
+<div className="space-y-2">
+<Label htmlFor="alamat" className="text-sm font-semibold">
+C. Alamat <span className="text-kir-red">*</span>
+</Label>
+<Textarea
+id="alamat"
+value={form.alamat}
+maxLength={300}
+onChange={(e) => handleChange("alamat", e.target.value)}
+placeholder="Masukkan alamat lengkap"
+rows={3}
+/>
+{errors.alamat && <p className="text-xs text-destructive">{errors.alamat}</p>}
+</div>
+
+{/* D. Nomor Telepon */}
+<div className="space-y-2">
+<Label htmlFor="telepon" className="text-sm font-semibold">
+D. Nomor Telepon Aktif <span className="text-kir-red">*</span>
+</Label>
+<Input
+id="telepon"
+type="tel"
+inputMode="numeric"
+pattern="[0-9]*"
+value={form.nomor_telepon}
+onChange={handlePhone}
+placeholder="08xxxxxxxxxx"
+className="h-12"
+/>
+{errors.nomor_telepon && <p className="text-xs text-destructive">{errors.nomor_telepon}</p>}
+</div>
+
+{/* E. Alasan */}
+<div className="space-y-2">
+<Label htmlFor="alasan" className="text-sm font-semibold">
+E. Alasan Masuk Organisasi <span className="text-kir-red">*</span>
+</Label>
+<Textarea
+id="alasan"
+value={form.alasan}
+maxLength={500}
+onChange={(e) => handleChange("alasan", e.target.value)}
+placeholder="Mengapa Anda ingin bergabung dengan KIR SMANCA?"
+rows={4}
+/>
+{errors.alasan && <p className="text-xs text-destructive">{errors.alasan}</p>}
+</div>
+
+{/* F. Pesan Tambahan */}
+<div className="space-y-2">
+<Label htmlFor="pesan" className="text-sm font-semibold">
+F. Pesan Tambahan <span className="text-muted-foreground font-normal">(opsional)</span>
+</Label>
+<Textarea
+id="pesan"
+value={form.pesan_tambahan}
+maxLength={500}
+onChange={(e) => handleChange("pesan_tambahan", e.target.value)}
+placeholder="Tuliskan pesan tambahan jika ada"
+rows={3}
+/>
+</div>
+
+<Button
+type="submit"
+disabled={submitting}
+className="w-full h-12 text-base font-bold btn-kir-gradient text-white shadow-card hover:opacity-95"
+>
+{submitting ? (
+<>
+<Loader2 className="h-5 w-5 mr-2 animate-spin" />
+Mengirim data...
+</>
+) : (
+<>
+<Send className="h-5 w-5 mr-2" />
+Kirim Pendaftaran
+</>
+)}
+</Button>
+</form>
+</main>
+<PublicFooter />
+</div>
+);
+}
+src/pages/public/PendaftaranBerhasil.jsx
+import React from "react";
+import { useNavigate } from "react-router-dom";
+import { CheckCircle2, Home } from "lucide-react";
+import { LOGO_URL, NAMA_ORGANISASI, NAMA_SEKOLAH } from "@/lib/kir-constants";
+import { Image } from "@/components/ui/image";
+
+export default function PendaftaranBerhasil() {
+const navigate = useNavigate();
+
+return (
+<div className="min-h-screen flex items-center justify-center hero-gradient px-4 py-16">
+<div className="absolute -top-24 -right-24 h-72 w-72 rounded-full bg-kir-yellow/20 blur-3xl" />
+<div className="relative w-full max-w-lg rounded-3xl bg-white shadow-card p-8 sm:p-10 text-center animate-pop-in">
+<div className="h-24 w-24 mx-auto mb-6">
+<Image
+src={LOGO_URL}
+alt="Logo KIR SMANCA"
+fittingType="contain"
+className="h-full w-full object-contain"
+/>
+</div>
+
+<div className="inline-flex h-20 w-20 items-center justify-center rounded-full bg-green-100 mb-5 animate-pop-in">
+<CheckCircle2 className="h-12 w-12 text-green-600" />
+</div>
+
+<h1 className="font-heading font-extrabold text-2xl sm:text-3xl text-kir-blue-dark">
+PENDAFTARAN BERHASIL!
+</h1>
+<p className="mt-4 text-muted-foreground leading-relaxed">
+Terima kasih telah mendaftarkan diri sebagai calon anggota {NAMA_ORGANISASI}.
+</p>
+<p className="mt-2 text-muted-foreground leading-relaxed">
+Data pendaftaran Anda telah berhasil dikirim dan disimpan.
+</p>
+<p className="mt-2 font-semibold text-kir-blue">
+Sampai bertemu di keluarga besar KIR SMANCA! 🎉
+</p>
+
+<button
+onClick={() => navigate("/")}
+className="mt-8 inline-flex items-center justify-center gap-2 rounded-full btn-kir-gradient px-7 py-3.5 text-base font-bold text-white shadow-card hover:-translate-y-0.5 transition-transform"
+>
+<Home className="h-5 w-5" />
+Kembali ke Halaman Utama
+</button>
+
+<p className="mt-6 text-xs text-muted-foreground">{NAMA_SEKOLAH}</p>
+</div>
+</div>
+);
+}
+Komponen publik
+src/components/public/PublicNavbar.jsx
+import React, { useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
+import { Menu, X, Flame } from "lucide-react";
+import { LOGO_URL, NAMA_ORGANISASI } from "@/lib/kir-constants";
+import { Image } from "@/components/ui/image";
+
+const NAV_ITEMS = [
+{ label: "Beranda", to: "/" },
+{ label: "Profil KIR", to: "/#profil" },
+{ label: "Kegiatan", to: "/#kegiatan" },
+{ label: "Dokumentasi", to: "/#dokumentasi" },
+{ label: "Pendaftaran", to: "/pendaftaran" },
+{ label: "Kontak", to: "/#kontak" },
+];
+
+export default function PublicNavbar() {
+const [mobileOpen, setMobileOpen] = useState(false);
+const navigate = useNavigate();
+
+const handleNav = (to) => {
+setMobileOpen(false);
+navigate(to);
+};
+
+return (
+<header className="fixed top-0 inset-x-0 z-50 bg-white shadow-soft">
+<div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+<div className="flex h-16 sm:h-20 items-center justify-between">
+{/* Logo + Nama */}
+<Link to="/" className="flex items-center gap-3" onClick={() => setMobileOpen(false)}>
+<div className="h-11 w-11 sm:h-12 sm:w-12 shrink-0">
+<Image
+src={LOGO_URL}
+alt="Logo KIR SMANCA"
+fittingType="contain"
+className="h-full w-full object-contain"
+/>
+</div>
+<div className="leading-tight">
+<span className="block font-heading font-extrabold text-kir-blue-dark text-base sm:text-lg tracking-tight">
+{NAMA_ORGANISASI}
+</span>
+<span className="block text-[10px] sm:text-xs text-muted-foreground font-medium">
+UPTD SMAN 1 Campalagian
+</span>
+</div>
+</Link>
+
+{/* Desktop nav */}
+<nav className="hidden lg:flex items-center gap-1">
+{NAV_ITEMS.map((item) => (
+<button
+key={item.label}
+onClick={() => handleNav(item.to)}
+className="px-3 py-2 text-sm font-semibold text-kir-blue-dark hover:text-kir-red transition-colors rounded-lg hover:bg-kir-cream/60"
+>
+{item.label}
+</button>
+))}
+<button
+onClick={() => handleNav("/pendaftaran")}
+className="ml-2 inline-flex items-center gap-2 rounded-full px-5 py-2.5 text-sm font-bold text-white btn-kir-gradient shadow-card hover:shadow-lg hover:-translate-y-0.5 transition-all"
+>
+<Flame className="h-4 w-4 text-kir-yellow" />
+Daftar Sekarang
+</button>
+</nav>
+
+{/* Mobile hamburger */}
+<button
+onClick={() => setMobileOpen((v) => !v)}
+className="lg:hidden inline-flex items-center justify-center h-11 w-11 rounded-lg text-kir-blue-dark hover:bg-kir-cream/60 transition-colors"
+aria-label="Buka menu"
+>
+{mobileOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
+</button>
+</div>
+</div>
+
+{/* Mobile menu panel */}
+<div
+className={`lg:hidden overflow-hidden transition-all duration-300 ease-out bg-white border-t border-border ${
+mobileOpen ? "max-h-[28rem] opacity-100" : "max-h-0 opacity-0"
+}`}
+>
+<nav className="px-4 py-4 flex flex-col gap-1">
+{NAV_ITEMS.map((item) => (
+<button
+key={item.label}
+onClick={() => handleNav(item.to)}
+className="text-left px-4 py-3 rounded-xl text-base font-semibold text-kir-blue-dark hover:bg-kir-cream/60 hover:text-kir-red transition-colors"
+>
+{item.label}
+</button>
+))}
+<button
+onClick={() => handleNav("/pendaftaran")}
+className="mt-2 inline-flex items-center justify-center gap-2 rounded-full px-5 py-3.5 text-base font-bold text-white btn-kir-gradient shadow-card"
+>
+<Flame className="h-5 w-5 text-kir-yellow" />
+Daftar Sekarang
+</button>
+</nav>
+</div>
+</header>
+);
+}
+src/components/public/PublicFooter.jsx
+import React from "react";
+import { Link } from "react-router-dom";
+import { Instagram, MapPin } from "lucide-react";
+import { LOGO_URL, NAMA_ORGANISASI, NAMA_SEKOLAH, INSTAGRAM_URL } from "@/lib/kir-constants";
+import { Image } from "@/components/ui/image";
+
+const QUICK_LINKS = [
+{ label: "Beranda", to: "/" },
+{ label: "Profil KIR", to: "/#profil" },
+{ label: "Kegiatan", to: "/#kegiatan" },
+{ label: "Dokumentasi", to: "/#dokumentasi" },
+{ label: "Pendaftaran", to: "/pendaftaran" },
+{ label: "Kontak", to: "/#kontak" },
+];
+
+export default function PublicFooter({ footerText }) {
+const copyright =
+footerText || "© 2026 KIR SMANCA | UPTD SMAN 1 Campalagian — All Rights Reserved.";
+
+return (
+<footer className="bg-kir-blue-dark text-white">
+<div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-12">
+<div className="grid gap-10 md:grid-cols-3">
+{/* Brand */}
+<div className="flex flex-col items-start gap-4">
+<div className="h-16 w-16">
+<Image
+src={LOGO_URL}
+alt="Logo KIR SMANCA"
+fittingType="contain"
+className="h-full w-full object-contain"
+/>
+</div>
+<div>
+<p className="font-heading font-extrabold text-lg">{NAMA_ORGANISASI}</p>
+<p className="text-sm text-white/70">{NAMA_SEKOLAH}</p>
+</div>
+</div>
+
+{/* Quick links */}
+<div>
+<h3 className="font-heading font-bold text-base mb-4 text-kir-yellow">Navigasi Cepat</h3>
+<ul className="grid grid-cols-2 gap-2">
+{QUICK_LINKS.map((l) => (
+<li key={l.label}>
+<Link
+to={l.to}
+className="text-sm text-white/80 hover:text-kir-yellow transition-colors"
+>
+{l.label}
+</Link>
+</li>
+))}
+</ul>
+</div>
+
+{/* Contact / Instagram */}
+<div>
+<h3 className="font-heading font-bold text-base mb-4 text-kir-yellow">Hubungi Kami</h3>
+<p className="flex items-start gap-2 text-sm text-white/80 mb-3">
+<MapPin className="h-4 w-4 mt-0.5 shrink-0 text-kir-yellow" />
+{NAMA_SEKOLAH}, Campalagian
+</p>
+<a
+href={INSTAGRAM_URL}
+target="_blank"
+rel="noopener noreferrer"
+className="inline-flex items-center gap-2 rounded-full bg-gradient-to-tr from-kir-red via-pink-500 to-kir-yellow px-5 py-2.5 text-sm font-bold text-white shadow-card hover:-translate-y-0.5 transition-transform"
+>
+<Instagram className="h-4 w-4" />
+Kunjungi Instagram
+</a>
+</div>
+</div>
+
+<div className="mt-10 pt-6 border-t border-white/15 text-center text-xs text-white/60">
+{copyright}
+</div>
+</div>
+</footer>
+);
+}
+src/components/public/HeroSection.jsx
+import React from "react";
+import { useNavigate } from "react-router-dom";
+import { Flame, CalendarDays, ArrowRight } from "lucide-react";
+import { LOGO_URL, DOKUMENTASI_FOTO, NAMA_SEKOLAH } from "@/lib/kir-constants";
+import { Image } from "@/components/ui/image";
+
+export default function HeroSection({ pengaturan }) {
+const navigate = useNavigate();
+const heroText =
+pengaturan?.deskripsi_hero ||
+"Selamat datang di website resmi Kelompok Ilmiah Remaja (KIR) SMANCA. Bergabunglah bersama kami untuk mengembangkan kreativitas, kemampuan berpikir kritis, keterampilan penelitian, serta semangat berinovasi dalam dunia ilmu pengetahuan.";
+
+return (
+<section id="beranda" className="relative overflow-hidden hero-gradient">
+{/* dekorasi */}
+<div className="absolute -top-24 -right-24 h-72 w-72 rounded-full bg-kir-yellow/20 blur-3xl" />
+<div className="absolute -bottom-32 -left-20 h-80 w-80 rounded-full bg-white/10 blur-3xl" />
+
+<div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 pt-28 pb-16 sm:pt-32 sm:pb-24">
+<div className="grid lg:grid-cols-2 gap-10 lg:gap-16 items-center">
+{/* Teks */}
+<div className="text-white animate-fade-in">
+<span className="inline-flex items-center gap-2 rounded-full bg-white/15 px-4 py-1.5 text-xs font-bold uppercase tracking-widest text-kir-yellow backdrop-blur">
+<Flame className="h-4 w-4" />
+Pendaftaran Anggota Baru
+</span>
+<h1 className="mt-5 font-heading font-extrabold text-3xl sm:text-4xl md:text-5xl leading-tight tracking-tight">
+KELOMPOK ILMIAH REMAJA
+</h1>
+<p className="mt-1 font-heading font-bold text-xl sm:text-2xl text-kir-yellow">
+{NAMA_SEKOLAH}
+</p>
+<p className="mt-5 text-white/90 text-base sm:text-lg leading-relaxed max-w-xl">
+{heroText}
+</p>
+<div className="mt-8 flex flex-col sm:flex-row gap-3">
+<button
+onClick={() => navigate("/pendaftaran")}
+className="inline-flex items-center justify-center gap-2 rounded-full bg-white px-7 py-3.5 text-base font-bold text-kir-red shadow-card hover:-translate-y-0.5 transition-transform"
+>
+<Flame className="h-5 w-5 text-kir-yellow" />
+Daftar Sekarang
+</button>
+<button
+onClick={() => navigate("/#kegiatan")}
+className="inline-flex items-center justify-center gap-2 rounded-full border-2 border-white/70 px-7 py-3.5 text-base font-bold text-white hover:bg-white/10 transition-colors"
+>
+<CalendarDays className="h-5 w-5" />
+Jelajahi Kegiatan
+<ArrowRight className="h-4 w-4" />
+</button>
+</div>
+</div>
+
+{/* Visual */}
+<div className="relative animate-pop-in">
+<div className="relative rounded-3xl overflow-hidden shadow-card ring-4 ring-white/20">
+<Image
+src={DOKUMENTASI_FOTO[1].url}
+alt="Kegiatan KIR SMANCA"
+fittingType="fill"
+className="h-72 sm:h-96 w-full object-cover"
+/>
+<div className="absolute inset-0 bg-gradient-to-t from-kir-blue-dark/60 via-transparent to-transparent" />
+</div>
+<div className="absolute -bottom-6 -left-6 h-24 w-24 sm:h-28 sm:w-28 rounded-2xl bg-white shadow-card flex items-center justify-center p-2">
+<Image
+src={LOGO_URL}
+alt="Logo KIR SMANCA"
+fittingType="contain"
+className="h-full w-full object-contain"
+/>
+</div>
+</div>
+</div>
+</div>
+</section>
+);
+}
+src/components/public/ProfilSection.jsx
+import React, { useState, useEffect } from "react";
+import { Brain, Lightbulb, Microscope, Target, Compass } from "lucide-react";
+import { base44 } from "@/api/base44Client";
+import { getSingleRecord, DEFAULT_PROFIL } from "@/lib/kir-constants";
+import SectionTitle from "./SectionTitle";
+import { Image } from "@/components/ui/image";
+import { LOGO_URL } from "@/lib/kir-constants";
+
+const CARDS = [
+{
+icon: Brain,
+title: "Berpikir Kritis",
+desc: "Menganalisis permasalahan secara logis dan ilmiah untuk menemukan solusi terbaik.",
+color: "text-kir-red",
+bg: "bg-kir-red/10",
+},
+{
+icon: Lightbulb,
+title: "Kreativitas dan Inovasi",
+desc: "Mengembangkan ide-ide kreatif dan inovatif dalam bidang ilmu pengetahuan dan teknologi.",
+color: "text-kir-blue",
+bg: "bg-kir-blue/10",
+},
+{
+icon: Microscope,
+title: "Penelitian Ilmiah",
+desc: "Melatih keterampilan penelitian, observasi, dan presentasi karya ilmiah.",
+color: "text-amber-600",
+bg: "bg-kir-yellow/15",
+},
+];
+
+export default function ProfilSection() {
+const [profil, setProfil] = useState(DEFAULT_PROFIL);
+
+useEffect(() => {
+getSingleRecord(base44.entities.ProfilOrganisasi, DEFAULT_PROFIL).then((p) => {
+if (!p._missing) setProfil(p);
+});
+}, []);
+
+return (
+<section id="profil" className="py-16 sm:py-24 bg-white">
+<div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+<SectionTitle
+eyebrow="Tentang Kami"
+title="TENTANG KIR SMANCA"
+subtitle={profil.deskripsi}
+/>
+
+{/* 3 kartu keunggulan */}
+<div className="grid gap-6 md:grid-cols-3 mt-12">
+{CARDS.map((c) => (
+<div
+key={c.title}
+className="group rounded-2xl border border-border bg-white p-7 shadow-soft hover:shadow-card hover:-translate-y-1 transition-all"
+>
+<div className={`inline-flex h-14 w-14 items-center justify-center rounded-xl ${c.bg} ${c.color} mb-5`}>
+<c.icon className="h-7 w-7" />
+</div>
+<h3 className="font-heading font-bold text-lg text-kir-blue-dark mb-2">{c.title}</h3>
+<p className="text-muted-foreground text-sm leading-relaxed">{c.desc}</p>
+</div>
+))}
+</div>
+
+{/* Visi & Misi */}
+<div className="grid gap-6 md:grid-cols-2 mt-10">
+<div className="rounded-2xl bg-kir-cream/50 border border-border p-7">
+<div className="flex items-center gap-3 mb-4">
+<span className="inline-flex h-11 w-11 items-center justify-center rounded-xl bg-kir-red/10 text-kir-red">
+<Target className="h-6 w-6" />
+</span>
+<h3 className="font-heading font-extrabold text-xl text-kir-blue-dark">Visi</h3>
+</div>
+<p className="text-foreground/80 leading-relaxed whitespace-pre-line">{profil.visi}</p>
+</div>
+<div className="rounded-2xl bg-kir-cream/50 border border-border p-7">
+<div className="flex items-center gap-3 mb-4">
+<span className="inline-flex h-11 w-11 items-center justify-center rounded-xl bg-kir-blue/10 text-kir-blue">
+<Compass className="h-6 w-6" />
+</span>
+<h3 className="font-heading font-extrabold text-xl text-kir-blue-dark">Misi</h3>
+</div>
+<p className="text-foreground/80 leading-relaxed whitespace-pre-line">{profil.misi}</p>
+</div>
+</div>
+</div>
+</section>
+);
+}
+src/components/public/KegiatanSection.jsx
+import React, { useState, useEffect } from "react";
+import { CalendarDays, MapPin } from "lucide-react";
+import moment from "moment";
+import "moment/locale/id";
+import { base44 } from "@/api/base44Client";
+import SectionTitle from "./SectionTitle";
+import { Image } from "@/components/ui/image";
+
+moment.locale("id");
+
+export default function KegiatanSection() {
+const [items, setItems] = useState([]);
+const [loading, setLoading] = useState(true);
+
+useEffect(() => {
+base44.entities.Kegiatan.filter({}, { sort: "-tanggal_kegiatan", limit: 50 })
+.then((page) => setItems(page.items || []))
+.catch(() => setItems([]))
+.finally(() => setLoading(false));
+}, []);
+
+return (
+<section id="kegiatan" className="py-16 sm:py-24 bg-muted/40">
+<div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+<SectionTitle
+eyebrow="Aktivitas"
+title="KEGIATAN KIR SMANCA"
+subtitle="Berbagai kegiatan ilmiah, pembinaan, dan observasi yang dilakukan oleh anggota KIR SMANCA."
+/>
+
+{loading ? (
+<div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+{[0, 1, 2].map((i) => (
+<div key={i} className="h-72 rounded-2xl bg-white animate-pulse" />
+))}
+</div>
+) : items.length === 0 ? (
+<div className="text-center py-16 rounded-2xl bg-white border border-dashed border-border">
+<CalendarDays className="h-12 w-12 mx-auto text-muted-foreground/40 mb-3" />
+<p className="text-muted-foreground">Belum ada kegiatan yang dipublikasikan.</p>
+</div>
+) : (
+<div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+{items.map((k) => (
+<article
+key={k.id}
+className="group overflow-hidden rounded-2xl bg-white border border-border shadow-soft hover:shadow-card hover:-translate-y-1 transition-all"
+>
+<div className="h-48 overflow-hidden">
+{k.gambar ? (
+<Image
+src={k.gambar}
+alt={k.nama_kegiatan}
+fittingType="fill"
+className="h-full w-full object-cover group-hover:scale-105 transition-transform duration-500"
+/>
+) : (
+<div className="h-full w-full bg-kir-cream flex items-center justify-center">
+<CalendarDays className="h-10 w-10 text-muted-foreground/40" />
+</div>
+)}
+</div>
+<div className="p-5">
+{k.tanggal_kegiatan && (
+<span className="inline-flex items-center gap-1.5 text-xs font-semibold text-kir-red mb-2">
+<CalendarDays className="h-3.5 w-3.5" />
+{moment(k.tanggal_kegiatan).format("D MMMM YYYY")}
+</span>
+)}
+<h3 className="font-heading font-bold text-base text-kir-blue-dark mb-2 line-clamp-2">
+{k.nama_kegiatan}
+</h3>
+{k.deskripsi && (
+<p className="text-sm text-muted-foreground leading-relaxed line-clamp-3">
+{k.deskripsi}
+</p>
+)}
+</div>
+</article>
+))}
+</div>
+)}
+</div>
+</section>
+);
+}
+src/components/public/DokumentasiSection.jsx
+import React, { useState, useEffect } from "react";
+import { Images, ZoomIn } from "lucide-react";
+import { base44 } from "@/api/base44Client";
+import SectionTitle from "./SectionTitle";
+import Lightbox from "./Lightbox";
+import { Image } from "@/components/ui/image";
+
+export default function DokumentasiSection() {
+const [items, setItems] = useState([]);
+const [loading, setLoading] = useState(true);
+const [lightboxIndex, setLightboxIndex] = useState(null);
+
+useEffect(() => {
+base44.entities.Dokumentasi.filter({}, { sort: "-created_date", limit: 100 })
+.then((page) => setItems(page.items || []))
+.catch(() => setItems([]))
+.finally(() => setLoading(false));
+}, []);
+
+const photos = items.map((it) => ({
+foto_url: it.foto_url,
+keterangan: it.keterangan || it.nama_file || "Dokumentasi KIR SMANCA",
+}));
+
+return (
+<section id="dokumentasi" className="py-16 sm:py-24 bg-white">
+<div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+<SectionTitle
+eyebrow="Galeri"
+title="DOKUMENTASI KIR SMANCA"
+subtitle="Momen kegiatan dan penelitian anggota KIR SMANCA. Klik foto untuk memperbesar."
+/>
+
+{loading ? (
+<div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4">
+{[0, 1, 2, 3, 4, 5].map((i) => (
+<div key={i} className="aspect-square rounded-xl bg-muted animate-pulse" />
+))}
+</div>
+) : photos.length === 0 ? (
+<div className="text-center py-16 rounded-2xl bg-muted/40 border border-dashed border-border">
+<Images className="h-12 w-12 mx-auto text-muted-foreground/40 mb-3" />
+<p className="text-muted-foreground">Belum ada dokumentasi yang dipublikasikan.</p>
+</div>
+) : (
+<div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4">
+{photos.map((p, i) => (
+<button
+key={i}
+onClick={() => setLightboxIndex(i)}
+className="group relative aspect-square overflow-hidden rounded-xl shadow-soft hover:shadow-card transition-all"
+>
+<Image
+src={p.foto_url}
+alt={p.keterangan}
+fittingType="fill"
+className="h-full w-full object-cover group-hover:scale-110 transition-transform duration-500"
+/>
+<div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-end p-3">
+<div className="flex items-center gap-1.5 text-white text-xs font-medium">
+<ZoomIn className="h-4 w-4" />
+<span className="line-clamp-1">{p.keterangan}</span>
+</div>
+</div>
+</button>
+))}
+</div>
+)}
+</div>
+
+<Lightbox
+photos={photos}
+index={lightboxIndex}
+onClose={(next) => {
+if (typeof next === "number") setLightboxIndex(next);
+else setLightboxIndex(null);
+}}
+/>
+</section>
+);
+}
+src/components/public/KontakSection.jsx
+import React from "react";
+import { Instagram, MapPin, School } from "lucide-react";
+import {
+NAMA_ORGANISASI,
+NAMA_SEKOLAH,
+INSTAGRAM_URL,
+DEFAULT_PENGATURAN,
+} from "@/lib/kir-constants";
+import SectionTitle from "./SectionTitle";
+
+export default function KontakSection({ pengaturan }) {
+const info = pengaturan?.info_kontak || DEFAULT_PENGATURAN.info_kontak;
+const ig = pengaturan?.instagram || INSTAGRAM_URL;
+
+return (
+<section id="kontak" className="py-16 sm:py-24 bg-muted/40">
+<div className="mx-auto max-w-4xl px-4 sm:px-6 lg:px-8">
+<SectionTitle
+eyebrow="Hubungi Kami"
+title="KONTAK & MEDIA SOSIAL"
+subtitle={info}
+/>
+
+<div className="grid sm:grid-cols-2 gap-6 mt-10">
+<div className="rounded-2xl bg-white border border-border p-7 shadow-soft">
+<div className="flex items-center gap-3 mb-4">
+<span className="inline-flex h-11 w-11 items-center justify-center rounded-xl bg-kir-red/10 text-kir-red">
+<School className="h-6 w-6" />
+</span>
+<h3 className="font-heading font-bold text-lg text-kir-blue-dark">Identitas</h3>
+</div>
+<p className="font-semibold text-foreground">{NAMA_ORGANISASI}</p>
+<p className="text-sm text-muted-foreground mt-1">{NAMA_SEKOLAH}</p>
+<p className="flex items-start gap-2 text-sm text-muted-foreground mt-3">
+<MapPin className="h-4 w-4 mt-0.5 shrink-0 text-kir-blue" />
+Campalagian, Sulawesi Barat
+</p>
+</div>
+
+<div className="rounded-2xl bg-white border border-border p-7 shadow-soft flex flex-col justify-between">
+<div className="flex items-center gap-3 mb-4">
+<span className="inline-flex h-11 w-11 items-center justify-center rounded-xl bg-gradient-to-tr from-kir-red via-pink-500 to-kir-yellow text-white">
+<Instagram className="h-6 w-6" />
+</span>
+<h3 className="font-heading font-bold text-lg text-kir-blue-dark">Instagram Resmi</h3>
+</div>
+<p className="text-sm text-muted-foreground mb-4">
+Ikuti aktivitas terbaru KIR SMANCA melalui Instagram resmi kami.
+</p>
+<a
+href={ig}
+target="_blank"
+rel="noopener noreferrer"
+className="inline-flex items-center justify-center gap-2 rounded-full bg-gradient-to-tr from-kir-red via-pink-500 to-kir-yellow px-6 py-3 text-sm font-bold text-white shadow-card hover:-translate-y-0.5 transition-transform"
+>
+<Instagram className="h-5 w-5" />
+Kunjungi Instagram KIR SMANCA
+</a>
+</div>
+</div>
+</div>
+</section>
+);
+}
+src/components/public/SectionTitle.jsx
+import React from "react";
+
+export default function SectionTitle({ eyebrow, title, subtitle, align = "center" }) {
+return (
+<div className={`mb-10 ${align === "center" ? "text-center mx-auto max-w-2xl" : ""}`}>
+{eyebrow && (
+<span className="inline-block text-xs font-bold uppercase tracking-widest text-kir-red mb-3">
+{eyebrow}
+</span>
+)}
+<h2 className="font-heading font-extrabold text-2xl sm:text-3xl md:text-4xl text-kir-blue-dark tracking-tight">
+{title}
+</h2>
+{subtitle && (
+<p className="mt-3 text-muted-foreground text-base sm:text-lg leading-relaxed">{subtitle}</p>
+)}
+</div>
+);
+}
+src/components/public/Lightbox.jsx
+import React, { useEffect, useCallback } from "react";
+import { X, ChevronLeft, ChevronRight } from "lucide-react";
+import { Image } from "@/components/ui/image";
+
+export default function Lightbox({ photos, index, onClose }) {
+const closeOnEsc = useCallback(
+(e) => {
+if (e.key === "Escape") onClose();
+},
+[onClose]
+);
+
+useEffect(() => {
+if (index === null) return;
+window.addEventListener("keydown", closeOnEsc);
+document.body.style.overflow = "hidden";
+return () => {
+window.removeEventListener("keydown", closeOnEsc);
+document.body.style.overflow = "";
+};
+}, [index, closeOnEsc]);
+
+if (index === null) return null;
+const photo = photos[index];
+if (!photo) return null;
+
+return (
+<div
+className="fixed inset-0 z-[100] bg-black/85 backdrop-blur-sm flex items-center justify-center p-4 animate-fade-in"
+onClick={onClose}
+>
+<button
+onClick={onClose}
+className="absolute top-4 right-4 h-11 w-11 rounded-full bg-white/15 hover:bg-white/25 text-white flex items-center justify-center transition-colors"
+aria-label="Tutup"
+>
+<X className="h-6 w-6" />
+</button>
+
+{photos.length > 1 && (
+<>
+<button
+onClick={(e) => {
+e.stopPropagation();
+const next = (index - 1 + photos.length) % photos.length;
+onClose(next);
+}}
+className="absolute left-3 sm:left-6 h-11 w-11 rounded-full bg-white/15 hover:bg-white/25 text-white flex items-center justify-center transition-colors"
+aria-label="Sebelumnya"
+>
+<ChevronLeft className="h-6 w-6" />
+</button>
+<button
+onClick={(e) => {
+e.stopPropagation();
+const next = (index + 1) % photos.length;
+onClose(next);
+}}
+className="absolute right-3 sm:right-6 h-11 w-11 rounded-full bg-white/15 hover:bg-white/25 text-white flex items-center justify-center transition-colors"
+aria-label="Berikutnya"
+>
+<ChevronRight className="h-6 w-6" />
+</button>
+</>
+)}
+
+<div
+className="relative max-w-5xl w-full max-h-[85vh] flex flex-col items-center animate-pop-in"
+onClick={(e) => e.stopPropagation()}
+>
+<div className="w-full max-h-[75vh] flex items-center justify-center">
+<Image
+src={photo.foto_url || photo.url}
+alt={photo.keterangan || "Dokumentasi KIR SMANCA"}
+fittingType="fit"
+className="max-h-[75vh] w-auto rounded-lg object-contain"
+/>
+</div>
+{photo.keterangan && (
+<p className="mt-4 text-center text-white/90 text-sm sm:text-base max-w-2xl">
+{photo.keterangan}
+</p>
+)}
+</div>
+</div>
+);
+}
+Panel admin
+src/components/admin/AdminLayout.jsx
+import React, { useState } from "react";
+import { Outlet, NavLink, useNavigate } from "react-router-dom";
+import {
+LayoutDashboard,
+Users,
+CalendarDays,
+Images,
+Building2,
+Globe,
+Settings,
+LogOut,
+Menu,
+X,
+} from "lucide-react";
+import { base44 } from "@/api/base44Client";
+import { useAuth } from "@/lib/AuthContext";
+import { LOGO_URL, NAMA_ORGANISASI } from "@/lib/kir-constants";
+import { Image } from "@/components/ui/image";
+
+const NAV = [
+{ to: "/admin", label: "Dashboard", icon: LayoutDashboard, end: true },
+{ to: "/admin/pendaftar", label: "Pendaftar", icon: Users },
+{ to: "/admin/kegiatan", label: "Kegiatan", icon: CalendarDays },
+{ to: "/admin/dokumentasi", label: "Dokumentasi", icon: Images },
+{ to: "/admin/profil", label: "Profil Organisasi", icon: Building2 },
+{ to: "/admin/informasi", label: "Informasi Website", icon: Globe },
+{ to: "/admin/pengaturan", label: "Pengaturan", icon: Settings },
+];
+
+export default function AdminLayout() {
+const [sidebarOpen, setSidebarOpen] = useState(false);
+const { user } = useAuth();
+
+const handleLogout = () => {
+base44.auth.logout("/admin/login");
+};
+
+const SidebarContent = () => (
+<div className="flex h-full flex-col">
+<div className="flex items-center gap-3 px-5 h-16 border-b border-sidebar-border">
+<div className="h-10 w-10 shrink-0">
+<Image
+src={LOGO_URL}
+alt="Logo KIR SMANCA"
+fittingType="contain"
+className="h-full w-full object-contain"
+/>
+</div>
+<div className="leading-tight">
+<p className="font-heading font-extrabold text-sm text-sidebar-foreground">ADMIN {NAMA_ORGANISASI}</p>
+<p className="text-[10px] text-muted-foreground">Panel Pengelolaan</p>
+</div>
+</div>
+
+<nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
+{NAV.map((item) => (
+<NavLink
+key={item.to}
+to={item.to}
+end={item.end}
+onClick={() => setSidebarOpen(false)}
+className={({ isActive }) =>
+`flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-semibold transition-colors ${
+isActive
+? "bg-sidebar-primary text-sidebar-primary-foreground shadow-soft"
+: "text-sidebar-foreground hover:bg-sidebar-accent"
+}`
+}
+>
+<item.icon className="h-5 w-5 shrink-0" />
+{item.label}
+</NavLink>
+))}
+</nav>
+
+<div className="px-3 py-4 border-t border-sidebar-border space-y-3">
+<div className="px-3 text-xs text-muted-foreground truncate">
+{user?.email || "Admin"}
+</div>
+<button
+onClick={handleLogout}
+className="w-full flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-semibold text-destructive hover:bg-destructive/10 transition-colors"
+>
+<LogOut className="h-5 w-5" />
+Logout
+</button>
+</div>
+</div>
+);
+
+return (
+<div className="min-h-screen bg-muted/40">
+{/* Desktop sidebar */}
+<aside className="hidden lg:flex fixed inset-y-0 left-0 w-64 bg-sidebar-background border-r border-sidebar-border flex-col">
+<SidebarContent />
+</aside>
+
+{/* Mobile sidebar drawer */}
+<div
+className={`lg:hidden fixed inset-0 z-50 transition-opacity duration-300 ${
+sidebarOpen ? "opacity-100" : "opacity-0 pointer-events-none"
+}`}
+>
+<div className="absolute inset-0 bg-black/40" onClick={() => setSidebarOpen(false)} />
+<aside
+className={`absolute inset-y-0 left-0 w-72 bg-sidebar-background shadow-card transition-transform duration-300 ${
+sidebarOpen ? "translate-x-0" : "-translate-x-full"
+}`}
+>
+<SidebarContent />
+</aside>
+</div>
+
+{/* Main */}
+<div className="lg:pl-64">
+{/* Topbar */}
+<header className="sticky top-0 z-30 flex h-16 items-center gap-3 border-b border-border bg-white px-4 sm:px-6 shadow-soft">
+<button
+onClick={() => setSidebarOpen(true)}
+className="lg:hidden inline-flex items-center justify-center h-10 w-10 rounded-lg text-kir-blue-dark hover:bg-muted"
+aria-label="Buka menu"
+>
+<Menu className="h-6 w-6" />
+</button>
+<div className="flex items-center gap-2">
+<span className="font-heading font-bold text-kir-blue-dark">Panel Admin KIR SMANCA</span>
+</div>
+</header>
+
+<main className="p-4 sm:p-6 lg:p-8">
+<Outlet />
+</main>
+</div>
+</div>
+);
+}
+src/pages/admin/AdminLogin.jsx
+import React, { useState } from "react";
+import { Lock, Mail, Eye, EyeOff, Loader2, LogIn, ArrowLeft } from "lucide-react";
+import { base44 } from "@/api/base44Client";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { LOGO_URL, NAMA_ORGANISASI, NAMA_SEKOLAH } from "@/lib/kir-constants";
+import { Image } from "@/components/ui/image";
+
+export default function AdminLogin() {
+const [email, setEmail] = useState("");
+const [password, setPassword] = useState("");
+const [showPwd, setShowPwd] = useState(false);
+const [error, setError] = useState("");
+const [loading, setLoading] = useState(false);
+
+const handleSubmit = async (e) => {
+e.preventDefault();
+setError("");
+if (loading) return;
+setLoading(true);
+try {
+await base44.auth.loginViaEmailPassword(email.trim(), password);
+window.location.href = "/admin";
+} catch (err) {
+setError(err?.message || "Email atau password salah.");
+} finally {
+setLoading(false);
+}
+};
+
+return (
+<div className="min-h-screen flex items-center justify-center hero-gradient px-4 py-12">
+<div className="absolute -top-24 -right-24 h-72 w-72 rounded-full bg-kir-yellow/20 blur-3xl" />
+<div className="relative w-full max-w-md">
+<div className="rounded-3xl bg-white shadow-card p-8 animate-pop-in">
+<div className="flex flex-col items-center text-center mb-7">
+<div className="h-20 w-20 mb-4">
+<Image src={LOGO_URL} alt="Logo KIR SMANCA" fittingType="contain" className="h-full w-full object-contain" />
+</div>
+<h1 className="font-heading font-extrabold text-xl text-kir-blue-dark">Admin {NAMA_ORGANISASI}</h1>
+<p className="text-sm text-muted-foreground mt-1">{NAMA_SEKOLAH}</p>
+</div>
+
+{error && (
+<div className="mb-4 rounded-lg bg-destructive/10 p-3 text-sm text-destructive text-center">
+{error}
+</div>
+)}
+
+<form onSubmit={handleSubmit} className="space-y-4">
+<div className="space-y-2">
+<Label htmlFor="email" className="text-sm font-semibold">Email Admin</Label>
+<div className="relative">
+<Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+<Input
+id="email"
+type="email"
+autoComplete="email"
+autoFocus
+required
+value={email}
+onChange={(e) => setEmail(e.target.value)}
+placeholder="admin@smanca.sch.id"
+className="pl-10 h-12"
+/>
+</div>
+</div>
+
+<div className="space-y-2">
+<Label htmlFor="password" className="text-sm font-semibold">Password</Label>
+<div className="relative">
+<Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+<Input
+id="password"
+type={showPwd ? "text" : "password"}
+autoComplete="current-password"
+required
+value={password}
+onChange={(e) => setPassword(e.target.value)}
+placeholder="••••••••"
+className="pl-10 pr-10 h-12"
+/>
+<button
+type="button"
+onClick={() => setShowPwd((v) => !v)}
+className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+aria-label={showPwd ? "Sembunyikan password" : "Tampilkan password"}
+>
+{showPwd ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+</button>
+</div>
+</div>
+
+<Button
+type="submit"
+disabled={loading}
+className="w-full h-12 font-bold btn-kir-gradient text-white shadow-card"
+>
+{loading ? (
+<>
+<Loader2 className="h-5 w-5 mr-2 animate-spin" />
+Memproses...
+</>
+) : (
+<>
+<LogIn className="h-5 w-5 mr-2" />
+Masuk
+</>
+)}
+</Button>
+</form>
+</div>
+
+<div className="mt-5 text-center">
+<a href="/" className="inline-flex items-center gap-1.5 text-sm font-semibold text-white/90 hover:text-white">
+<ArrowLeft className="h-4 w-4" />
+Kembali ke Website Publik
+</a>
+</div>
+</div>
+</div>
+);
+}
+src/pages/admin/AdminDashboard.jsx
+import React, { useState, useEffect } from "react";
+import { Users, Images, CalendarDays, Activity, Clock, TrendingUp } from "lucide-react";
+import moment from "moment";
+import "moment/locale/id";
+import { base44 } from "@/api/base44Client";
+import { useAuth } from "@/lib/AuthContext";
+
+moment.locale("id");
+
+export default function AdminDashboard() {
+const { user } = useAuth();
+const [stats, setStats] = useState({ pendaftar: 0, dokumentasi: 0, kegiatan: 0 });
+const [recent, setRecent] = useState([]);
+const [lastUpdate, setLastUpdate] = useState(null);
+const [loading, setLoading] = useState(true);
+
+useEffect(() => {
+(async () => {
+try {
+const [pendaftarCount, dokumentasiCount, kegiatanCount, recentPage, kegiatanPage] = await Promise.all([
+base44.entities.Pendaftar.count({}),
+base44.entities.Dokumentasi.count({}),
+base44.entities.Kegiatan.count({}),
+base44.entities.Pendaftar.filter({}, { sort: "-created_date", limit: 5 }),
+base44.entities.Kegiatan.filter({}, { sort: "-updated_date", limit: 1 }),
+]);
+setStats({
+pendaftar: pendaftarCount,
+dokumentasi: dokumentasiCount,
+kegiatan: kegiatanCount,
+});
+setRecent(recentPage.items || []);
+if (kegiatanPage.items && kegiatanPage.items.length > 0) {
+setLastUpdate(kegiatanPage.items[0].updated_date || kegiatanPage.items[0].created_date);
+}
+} catch (e) {
+console.error(e);
+} finally {
+setLoading(false);
+}
+})();
+}, []);
+
+const cards = [
+{ label: "Total Pendaftar", value: stats.pendaftar, icon: Users, color: "text-kir-red", bg: "bg-kir-red/10" },
+{ label: "Total Dokumentasi", value: stats.dokumentasi, icon: Images, color: "text-kir-blue", bg: "bg-kir-blue/10" },
+{ label: "Total Kegiatan", value: stats.kegiatan, icon: CalendarDays, color: "text-amber-600", bg: "bg-kir-yellow/15" },
+];
+
+return (
+<div className="space-y-6">
+<div>
+<h1 className="font-heading font-extrabold text-2xl text-kir-blue-dark">Dashboard</h1>
+<p className="text-sm text-muted-foreground mt-1">
+Selamat datang, {user?.email || "Admin"} — ringkasan operasional website KIR SMANCA.
+</p>
+</div>
+
+{/* Stat cards */}
+<div className="grid gap-4 sm:grid-cols-3">
+{cards.map((c) => (
+<div key={c.label} className="rounded-2xl bg-white border border-border p-5 shadow-soft">
+<div className="flex items-center justify-between">
+<span className={`inline-flex h-12 w-12 items-center justify-center rounded-xl ${c.bg} ${c.color}`}>
+<c.icon className="h-6 w-6" />
+</span>
+{loading ? (
+<div className="h-8 w-12 rounded bg-muted animate-pulse" />
+) : (
+<span className="font-heading font-extrabold text-3xl text-kir-blue-dark">{c.value}</span>
+)}
+</div>
+<p className="mt-3 text-sm font-semibold text-muted-foreground">{c.label}</p>
+</div>
+))}
+</div>
+
+<div className="grid gap-6 lg:grid-cols-3">
+{/* Aktivitas pendaftaran terbaru */}
+<div className="lg:col-span-2 rounded-2xl bg-white border border-border shadow-soft">
+<div className="flex items-center gap-2 px-5 py-4 border-b border-border">
+<TrendingUp className="h-5 w-5 text-kir-red" />
+<h2 className="font-heading font-bold text-base text-kir-blue-dark">Aktivitas Pendaftaran Terbaru</h2>
+</div>
+<div className="p-5">
+{loading ? (
+<div className="space-y-3">
+{[0, 1, 2].map((i) => (
+<div key={i} className="h-12 rounded bg-muted animate-pulse" />
+))}
+</div>
+) : recent.length === 0 ? (
+<p className="text-sm text-muted-foreground text-center py-8">Belum ada pendaftar baru.</p>
+) : (
+<ul className="divide-y divide-border">
+{recent.map((p) => (
+<li key={p.id} className="flex items-center justify-between py-3">
+<div className="min-w-0">
+<p className="font-semibold text-sm text-foreground truncate">{p.nama}</p>
+<p className="text-xs text-muted-foreground">{p.kelas}</p>
+</div>
+<span className="text-xs text-muted-foreground shrink-0 ml-3">
+{moment(p.created_date).format("D MMM YYYY, HH:mm")}
+</span>
+</li>
+))}
+</ul>
+)}
+</div>
+</div>
+
+{/* Status operasional */}
+<div className="rounded-2xl bg-white border border-border shadow-soft p-5">
+<div className="flex items-center gap-2 mb-4">
+<Activity className="h-5 w-5 text-green-600" />
+<h2 className="font-heading font-bold text-base text-kir-blue-dark">Status Operasional</h2>
+</div>
+<div className="space-y-3 text-sm">
+<div className="flex items-center justify-between">
+<span className="text-muted-foreground">Website Publik</span>
+<span className="inline-flex items-center gap-1.5 font-semibold text-green-600">
+<span className="h-2 w-2 rounded-full bg-green-500" /> Aktif
+</span>
+</div>
+<div className="flex items-center justify-between">
+<span className="text-muted-foreground">Pendaftaran</span>
+<span className="font-semibold text-green-600">Dibuka</span>
+</div>
+<div className="flex items-start justify-between gap-2">
+<span className="text-muted-foreground flex items-center gap-1.5">
+<Clock className="h-4 w-4" /> Pembaruan terakhir
+</span>
+<span className="font-semibold text-foreground text-right">
+{lastUpdate ? moment(lastUpdate).format("D MMM YYYY, HH:mm") : "—"}
+</span>
+</div>
+</div>
+</div>
+</div>
+</div>
+);
+}
+src/pages/admin/AdminPendaftar.jsx
+import React, { useState, useEffect, useCallback } from "react";
+import { useNavigate } from "react-router-dom";
+import { Search, Trash2, Eye, Users } from "lucide-react";
+import moment from "moment";
+import "moment/locale/id";
+import { base44 } from "@/api/base44Client";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import {
+Select,
+SelectTrigger,
+SelectValue,
+SelectContent,
+SelectItem,
+} from "@/components/ui/select";
+import { KELAS_OPTIONS } from "@/lib/kir-constants";
+
+moment.locale("id");
+
+export default function AdminPendaftar() {
+const navigate = useNavigate();
+const [items, setItems] = useState([]);
+const [loading, setLoading] = useState(true);
+const [search, setSearch] = useState("");
+const [kelasFilter, setKelasFilter] = useState("all");
+const [sortBy, setSortBy] = useState("-created_date");
+
+const load = useCallback(() => {
+setLoading(true);
+const query = {};
+if (search.trim()) query.nama = { $regex: search.trim(), $options: "i" };
+if (kelasFilter !== "all") query.kelas = kelasFilter;
+base44.entities.Pendaftar
+.filter(query, { sort: sortBy, limit: 500 })
+.then((page) => setItems(page.items || []))
+.catch(() => setItems([]))
+.finally(() => setLoading(false));
+}, [search, kelasFilter, sortBy]);
+
+useEffect(() => {
+const t = setTimeout(load, 250);
+return () => clearTimeout(t);
+}, [load]);
+
+const handleDelete = async (id, nama) => {
+if (!window.confirm(`Hapus data pendaftar "${nama}"? Tindakan ini tidak dapat dibatalkan.`)) return;
+try {
+await base44.entities.Pendaftar.delete(id);
+setItems((prev) => prev.filter((p) => p.id !== id));
+} catch (e) {
+alert("Gagal menghapus data: " + (e?.message || "error"));
+}
+};
+
+return (
+<div className="space-y-5">
+<div>
+<h1 className="font-heading font-extrabold text-2xl text-kir-blue-dark">Pendaftar</h1>
+<p className="text-sm text-muted-foreground mt-1">Kelola data pendaftaran anggota baru.</p>
+</div>
+
+{/* Filter bar */}
+<div className="rounded-2xl bg-white border border-border shadow-soft p-4 flex flex-col sm:flex-row gap-3">
+<div className="relative flex-1">
+<Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+<Input
+placeholder="Cari nama pendaftar..."
+value={search}
+onChange={(e) => setSearch(e.target.value)}
+className="pl-10 h-11"
+/>
+</div>
+<Select value={kelasFilter} onValueChange={setKelasFilter}>
+<SelectTrigger className="h-11 sm:w-48 w-full">
+<SelectValue placeholder="Semua kelas" />
+</SelectTrigger>
+<SelectContent className="max-h-72">
+<SelectItem value="all">Semua Kelas</SelectItem>
+{KELAS_OPTIONS.map((k) => (
+<SelectItem key={k} value={k}>{k}</SelectItem>
+))}
+</SelectContent>
+</Select>
+<Select value={sortBy} onValueChange={setSortBy}>
+<SelectTrigger className="h-11 sm:w-52 w-full">
+<SelectValue />
+</SelectTrigger>
+<SelectContent>
+<SelectItem value="-created_date">Terbaru</SelectItem>
+<SelectItem value="created_date">Terlama</SelectItem>
+<SelectItem value="nama">Nama A-Z</SelectItem>
+</SelectContent>
+</Select>
+</div>
+
+{/* Table */}
+<div className="rounded-2xl bg-white border border-border shadow-soft overflow-hidden">
+{loading ? (
+<div className="p-8 space-y-3">
+{[0, 1, 2, 3].map((i) => (
+<div key={i} className="h-12 rounded bg-muted animate-pulse" />
+))}
+</div>
+) : items.length === 0 ? (
+<div className="p-12 text-center">
+<Users className="h-12 w-12 mx-auto text-muted-foreground/40 mb-3" />
+<p className="text-muted-foreground">Tidak ada data pendaftar.</p>
+</div>
+) : (
+<div className="overflow-x-auto">
+<table className="w-full text-sm">
+<thead className="bg-muted/50 text-left text-xs uppercase tracking-wide text-muted-foreground">
+<tr>
+<th className="px-4 py-3 font-semibold">Nama</th>
+<th className="px-4 py-3 font-semibold">Kelas</th>
+<th className="px-4 py-3 font-semibold hidden sm:table-cell">Telepon</th>
+<th className="px-4 py-3 font-semibold hidden md:table-cell">Tanggal</th>
+<th className="px-4 py-3 font-semibold text-right">Aksi</th>
+</tr>
+</thead>
+<tbody className="divide-y divide-border">
+{items.map((p) => (
+<tr key={p.id} className="hover:bg-muted/30">
+<td className="px-4 py-3 font-semibold text-foreground">{p.nama}</td>
+<td className="px-4 py-3 text-muted-foreground">{p.kelas}</td>
+<td className="px-4 py-3 text-muted-foreground hidden sm:table-cell">{p.nomor_telepon}</td>
+<td className="px-4 py-3 text-muted-foreground hidden md:table-cell">
+{moment(p.created_date).format("D MMM YYYY")}
+</td>
+<td className="px-4 py-3">
+<div className="flex items-center justify-end gap-2">
+<Button
+variant="ghost"
+size="sm"
+onClick={() => navigate(`/admin/pendaftar/${p.id}`)}
+className="h-9 w-9 p-0 text-kir-blue"
+>
+<Eye className="h-4 w-4" />
+</Button>
+<Button
+variant="ghost"
+size="sm"
+onClick={() => handleDelete(p.id, p.nama)}
+className="h-9 w-9 p-0 text-destructive hover:bg-destructive/10"
+>
+<Trash2 className="h-4 w-4" />
+</Button>
+</div>
+</td>
+</tr>
+))}
+</tbody>
+</table>
+</div>
+)}
+</div>
+{!loading && items.length > 0 && (
+<p className="text-xs text-muted-foreground">Total: {items.length} pendaftar</p>
+)}
+</div>
+);
+}
+src/pages/admin/AdminPendaftarDetail.jsx
+import React, { useState, useEffect } from "react";
+import { useParams, useNavigate } from "react-router-dom";
+import { ArrowLeft, Trash2, Phone, MapPin, MessageSquare, User, GraduationCap } from "lucide-react";
+import moment from "moment";
+import "moment/locale/id";
+import { base44 } from "@/api/base44Client";
+import { Button } from "@/components/ui/button";
+
+moment.locale("id");
+
+export default function AdminPendaftarDetail() {
+const { id } = useParams();
+const navigate = useNavigate();
+const [data, setData] = useState(null);
+const [loading, setLoading] = useState(true);
+
+useEffect(() => {
+base44.entities.Pendaftar
+.get(id)
+.then(setData)
+.catch(() => setData(null))
+.finally(() => setLoading(false));
+}, [id]);
+
+const handleDelete = async () => {
+if (!window.confirm(`Hapus data pendaftar "${data.nama}"?`)) return;
+await base44.entities.Pendaftar.delete(id);
+navigate("/admin/pendaftar");
+};
+
+if (loading) {
+return <div className="h-64 rounded-2xl bg-muted animate-pulse" />;
+}
+if (!data) {
+return (
+<div className="text-center py-16">
+<p className="text-muted-foreground">Data pendaftar tidak ditemukan.</p>
+<Button onClick={() => navigate("/admin/pendaftar")} className="mt-4">Kembali</Button>
+</div>
+);
+}
+
+const rows = [
+{ icon: User, label: "Nama Lengkap", value: data.nama },
+{ icon: GraduationCap, label: "Kelas", value: data.kelas },
+{ icon: MapPin, label: "Alamat", value: data.alamat },
+{ icon: Phone, label: "Nomor Telepon", value: data.nomor_telepon },
+{ icon: MessageSquare, label: "Alasan Masuk Organisasi", value: data.alasan },
+{ icon: MessageSquare, label: "Pesan Tambahan", value: data.pesan_tambahan || "—" },
+];
+
+return (
+<div className="space-y-5 max-w-3xl">
+<button
+onClick={() => navigate("/admin/pendaftar")}
+className="inline-flex items-center gap-2 text-sm font-semibold text-kir-blue hover:text-kir-red"
+>
+<ArrowLeft className="h-4 w-4" />
+Kembali ke daftar pendaftar
+</button>
+
+<div className="rounded-2xl bg-white border border-border shadow-soft p-6 sm:p-8">
+<div className="flex items-start justify-between mb-6">
+<div>
+<h1 className="font-heading font-extrabold text-2xl text-kir-blue-dark">{data.nama}</h1>
+<p className="text-sm text-muted-foreground mt-1">
+Terdaftar: {moment(data.created_date).format("D MMMM YYYY, HH:mm")} WIB
+</p>
+</div>
+<Button variant="outline" onClick={handleDelete} className="text-destructive border-destructive/40 hover:bg-destructive/10">
+<Trash2 className="h-4 w-4 mr-2" /> Hapus
+</Button>
+</div>
+
+<dl className="space-y-5">
+{rows.map((r) => (
+<div key={r.label} className="grid sm:grid-cols-3 gap-2 sm:gap-4">
+<dt className="flex items-center gap-2 text-sm font-semibold text-muted-foreground">
+<r.icon className="h-4 w-4 text-kir-blue" />
+{r.label}
+</dt>
+<dd className="sm:col-span-2 text-sm text-foreground whitespace-pre-line">{r.value}</dd>
+</div>
+))}
+</dl>
+</div>
+</div>
+);
+}
+src/pages/admin/AdminKegiatan.jsx
+import React, { useState, useEffect } from "react";
+import { Plus, Pencil, Trash2, X, CalendarDays, Loader2, Upload } from "lucide-react";
+import moment from "moment";
+import "moment/locale/id";
+import { base44 } from "@/api/base44Client";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Image } from "@/components/ui/image";
+
+moment.locale("id");
+
+const EMPTY = { nama_kegiatan: "", deskripsi: "", tanggal_kegiatan: "", gambar: "" };
+
+export default function AdminKegiatan() {
+const [items, setItems] = useState([]);
+const [loading, setLoading] = useState(true);
+const [editing, setEditing] = useState(null); // record or EMPTY
+const [saving, setSaving] = useState(false);
+const [uploading, setUploading] = useState(false);
+
+const load = () => {
+setLoading(true);
+base44.entities.Kegiatan.filter({}, { sort: "-tanggal_kegiatan", limit: 100 })
+.then((p) => setItems(p.items || []))
+.catch(() => setItems([]))
+.finally(() => setLoading(false));
+};
+
+useEffect(load, []);
+
+const openNew = () => setEditing({ ...EMPTY });
+const openEdit = (it) => setEditing({ ...it, tanggal_kegiatan: it.tanggal_kegiatan ? it.tanggal_kegiatan.slice(0, 10) : "" });
+
+const handleUpload = async (file) => {
+if (!file) return;
+setUploading(true);
+try {
+const { file_url } = await base44.integrations.Core.UploadPublicFile({ file });
+setEditing((e) => ({ ...e, gambar: file_url }));
+} catch (e) {
+alert("Gagal mengunggah foto: " + (e?.message || "error"));
+} finally {
+setUploading(false);
+}
+};
+
+const handleSave = async (e) => {
+e.preventDefault();
+if (!editing.nama_kegiatan.trim()) return;
+setSaving(true);
+try {
+const payload = {
+nama_kegiatan: editing.nama_kegiatan.trim(),
+deskripsi: editing.deskripsi.trim(),
+tanggal_kegiatan: editing.tanggal_kegiatan || undefined,
+gambar: editing.gambar || undefined,
+};
+if (editing.id) {
+await base44.entities.Kegiatan.update(editing.id, payload);
+} else {
+await base44.entities.Kegiatan.create(payload);
+}
+setEditing(null);
+load();
+} catch (err) {
+alert("Gagal menyimpan: " + (err?.message || "error"));
+} finally {
+setSaving(false);
+}
+};
+
+const handleDelete = async (id, nama) => {
+if (!window.confirm(`Hapus kegiatan "${nama}"?`)) return;
+await base44.entities.Kegiatan.delete(id);
+load();
+};
+
+return (
+<div className="space-y-5">
+<div className="flex items-center justify-between">
+<div>
+<h1 className="font-heading font-extrabold text-2xl text-kir-blue-dark">Kegiatan</h1>
+<p className="text-sm text-muted-foreground mt-1">Kelola kegiatan KIR SMANCA.</p>
+</div>
+<Button onClick={openNew} className="btn-kir-gradient text-white">
+<Plus className="h-4 w-4 mr-2" /> Tambah Kegiatan
+</Button>
+</div>
+
+{loading ? (
+<div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+{[0, 1, 2].map((i) => (
+<div key={i} className="h-56 rounded-2xl bg-muted animate-pulse" />
+))}
+</div>
+) : items.length === 0 ? (
+<div className="text-center py-16 rounded-2xl bg-white border border-dashed border-border">
+<CalendarDays className="h-12 w-12 mx-auto text-muted-foreground/40 mb-3" />
+<p className="text-muted-foreground">Belum ada kegiatan.</p>
+</div>
+) : (
+<div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+{items.map((k) => (
+<div key={k.id} className="rounded-2xl bg-white border border-border shadow-soft overflow-hidden">
+<div className="h-40 bg-muted">
+{k.gambar ? (
+<Image src={k.gambar} alt={k.nama_kegiatan} fittingType="fill" className="h-full w-full object-cover" />
+) : (
+<div className="h-full w-full flex items-center justify-center text-muted-foreground/40">
+<CalendarDays className="h-8 w-8" />
+</div>
+)}
+</div>
+<div className="p-4">
+{k.tanggal_kegiatan && (
+<span className="text-xs font-semibold text-kir-red">
+{moment(k.tanggal_kegiatan).format("D MMM YYYY")}
+</span>
+)}
+<h3 className="font-heading font-bold text-sm text-kir-blue-dark mt-1 line-clamp-1">{k.nama_kegiatan}</h3>
+<p className="text-xs text-muted-foreground mt-1 line-clamp-2">{k.deskripsi || "—"}</p>
+<div className="flex gap-2 mt-3">
+<Button variant="outline" size="sm" onClick={() => openEdit(k)} className="flex-1">
+<Pencil className="h-3.5 w-3.5 mr-1.5" /> Edit
+</Button>
+<Button variant="outline" size="sm" onClick={() => handleDelete(k.id, k.nama_kegiatan)} className="text-destructive border-destructive/40 hover:bg-destructive/10">
+<Trash2 className="h-3.5 w-3.5" />
+</Button>
+</div>
+</div>
+</div>
+))}
+</div>
+)}
+
+{/* Modal form */}
+{editing && (
+<div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4" onClick={() => setEditing(null)}>
+<div className="bg-white rounded-2xl shadow-card w-full max-w-lg max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+<div className="flex items-center justify-between px-6 py-4 border-b border-border sticky top-0 bg-white">
+<h2 className="font-heading font-bold text-lg text-kir-blue-dark">
+{editing.id ? "Edit Kegiatan" : "Tambah Kegiatan"}
+</h2>
+<button onClick={() => setEditing(null)} className="text-muted-foreground hover:text-foreground">
+<X className="h-5 w-5" />
+</button>
+</div>
+<form onSubmit={handleSave} className="p-6 space-y-4">
+<div className="space-y-2">
+<Label className="font-semibold">Nama Kegiatan *</Label>
+<Input
+value={editing.nama_kegiatan}
+maxLength={150}
+onChange={(e) => setEditing({ ...editing, nama_kegiatan: e.target.value })}
+required
+className="h-11"
+/>
+</div>
+<div className="space-y-2">
+<Label className="font-semibold">Tanggal Kegiatan</Label>
+<Input
+type="date"
+value={editing.tanggal_kegiatan}
+onChange={(e) => setEditing({ ...editing, tanggal_kegiatan: e.target.value })}
+className="h-11"
+/>
+</div>
+<div className="space-y-2">
+<Label className="font-semibold">Deskripsi</Label>
+<Textarea
+value={editing.deskripsi}
+maxLength={1000}
+rows={4}
+onChange={(e) => setEditing({ ...editing, deskripsi: e.target.value })}
+/>
+</div>
+<div className="space-y-2">
+<Label className="font-semibold">Foto Kegiatan</Label>
+{editing.gambar && (
+<div className="h-32 w-full rounded-lg overflow-hidden mb-2">
+<Image src={editing.gambar} alt="Pratinjau" fittingType="fill" className="h-full w-full object-cover" />
+</div>
+)}
+<label className="inline-flex items-center gap-2 rounded-lg border border-border px-4 py-2.5 text-sm font-semibold cursor-pointer hover:bg-muted transition-colors">
+{uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
+{uploading ? "Mengunggah..." : "Unggah Foto"}
+<input
+type="file"
+accept="image/*"
+className="hidden"
+onChange={(e) => handleUpload(e.target.files[0])}
+disabled={uploading}
+/>
+</label>
+</div>
+<div className="flex gap-3 pt-2">
+<Button type="button" variant="outline" onClick={() => setEditing(null)} className="flex-1">Batal</Button>
+<Button type="submit" disabled={saving} className="flex-1 btn-kir-gradient text-white">
+{saving ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : null}
+{saving ? "Menyimpan..." : "Simpan"}
+</Button>
+</div>
+</form>
+</div>
+</div>
+)}
+</div>
+);
+}
+src/pages/admin/AdminDokumentasi.jsx
+import React, { useState, useEffect } from "react";
+import { Upload, Trash2, Pencil, X, Loader2, Images, AlertTriangle, CheckCircle2 } from "lucide-react";
+import { base44 } from "@/api/base44Client";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Image } from "@/components/ui/image";
+
+async function computeSHA256(file) {
+const buf = await file.arrayBuffer();
+const hashBuf = await crypto.subtle.digest("SHA-256", buf);
+return Array.from(new Uint8Array(hashBuf))
+.map((b) => b.toString(16).padStart(2, "0"))
+.join("");
+}
+
+export default function AdminDokumentasi() {
+const [items, setItems] = useState([]);
+const [loading, setLoading] = useState(true);
+const [busy, setBusy] = useState(false); // upload+dedup
+const [status, setStatus] = useState({ type: "", msg: "" });
+const [editing, setEditing] = useState(null); // {id, keterangan}
+
+const load = () => {
+setLoading(true);
+base44.entities.Dokumentasi.filter({}, { sort: "-created_date", limit: 200 })
+.then((p) => setItems(p.items || []))
+.catch(() => setItems([]))
+.finally(() => setLoading(false));
+};
+
+useEffect(load, []);
+
+const handleUpload = async (file) => {
+if (!file) return;
+setStatus({ type: "", msg: "" });
+if (!file.type.startsWith("image/")) {
+setStatus({ type: "error", msg: "File harus berupa gambar." });
+return;
+}
+if (file.size > 8 * 1024 * 1024) {
+setStatus({ type: "error", msg: "Ukuran file maksimal 8 MB." });
+return;
+}
+setBusy(true);
+try {
+// 1. Hitung hash
+const hash = await computeSHA256(file);
+// 2. Cek duplikasi terhadap hash yang sudah tersimpan
+const existing = await base44.entities.Dokumentasi.filter(
+{ hash_file: hash },
+{ limit: 1 }
+);
+if (existing.items && existing.items.length > 0) {
+setStatus({ type: "error", msg: "Foto tersebut sudah tersedia dalam dokumentasi." });
+return;
+}
+// 3. Unggah
+const { file_url } = await base44.integrations.Core.UploadPublicFile({ file });
+// 4. Simpan record
+await base44.entities.Dokumentasi.create({
+foto_url: file_url,
+nama_file: file.name,
+hash_file: hash,
+keterangan: "",
+});
+setStatus({ type: "success", msg: "Foto berhasil diunggah ke dokumentasi." });
+load();
+} catch (e) {
+setStatus({ type: "error", msg: "Gagal mengunggah: " + (e?.message || "error") });
+} finally {
+setBusy(false);
+}
+};
+
+const handleSaveKeterangan = async () => {
+if (!editing) return;
+try {
+await base44.entities.Dokumentasi.update(editing.id, { keterangan: editing.keterangan });
+setEditing(null);
+load();
+} catch (e) {
+alert("Gagal menyimpan: " + (e?.message || "error"));
+}
+};
+
+const handleDelete = async (id) => {
+if (!window.confirm("Hapus foto dokumentasi ini?")) return;
+await base44.entities.Dokumentasi.delete(id);
+load();
+};
+
+return (
+<div className="space-y-5">
+<div>
+<h1 className="font-heading font-extrabold text-2xl text-kir-blue-dark">Dokumentasi</h1>
+<p className="text-sm text-muted-foreground mt-1">
+Unggah foto dokumentasi. Sistem mencegah foto identik (berdasarkan hash SHA-256).
+</p>
+</div>
+
+{/* Upload area */}
+<div className="rounded-2xl bg-white border border-border shadow-soft p-6">
+<label className="flex flex-col items-center justify-center gap-3 border-2 border-dashed border-border rounded-xl py-10 cursor-pointer hover:bg-muted/40 transition-colors">
+{busy ? (
+<Loader2 className="h-10 w-10 text-kir-blue animate-spin" />
+) : (
+<Upload className="h-10 w-10 text-kir-blue" />
+)}
+<div className="text-center">
+<p className="font-semibold text-foreground">
+{busy ? "Memproses..." : "Klik untuk mengunggah foto dokumentasi"}
+</p>
+<p className="text-xs text-muted-foreground mt-1">Format gambar, maksimal 8 MB</p>
+</div>
+<input
+type="file"
+accept="image/*"
+className="hidden"
+onChange={(e) => handleUpload(e.target.files[0])}
+disabled={busy}
+/>
+</label>
+
+{status.msg && (
+<div
+className={`mt-4 flex items-start gap-2 rounded-lg p-3 text-sm ${
+status.type === "error"
+? "bg-destructive/10 text-destructive"
+: "bg-green-50 text-green-700"
+}`}
+>
+{status.type === "error" ? (
+<AlertTriangle className="h-5 w-5 shrink-0" />
+) : (
+<CheckCircle2 className="h-5 w-5 shrink-0" />
+)}
+<span>{status.msg}</span>
+</div>
+)}
+</div>
+
+{/* Gallery */}
+{loading ? (
+<div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+{[0, 1, 2, 3].map((i) => (
+<div key={i} className="aspect-square rounded-xl bg-muted animate-pulse" />
+))}
+</div>
+) : items.length === 0 ? (
+<div className="text-center py-16 rounded-2xl bg-white border border-dashed border-border">
+<Images className="h-12 w-12 mx-auto text-muted-foreground/40 mb-3" />
+<p className="text-muted-foreground">Belum ada dokumentasi.</p>
+</div>
+) : (
+<div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4">
+{items.map((it) => (
+<div key={it.id} className="group relative aspect-square rounded-xl overflow-hidden border border-border shadow-soft">
+<Image src={it.foto_url} alt={it.keterangan || it.nama_file} fittingType="fill" className="h-full w-full object-cover" />
+<div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex flex-col justify-end p-3">
+<p className="text-white text-xs line-clamp-2 mb-2">{it.keterangan || it.nama_file}</p>
+<div className="flex gap-2">
+<button
+onClick={() => setEditing({ id: it.id, keterangan: it.keterangan || "" })}
+className="flex-1 inline-flex items-center justify-center gap-1 rounded-md bg-white/90 px-2 py-1.5 text-xs font-semibold text-kir-blue-dark hover:bg-white"
+>
+<Pencil className="h-3 w-3" /> Keterangan
+</button>
+<button
+onClick={() => handleDelete(it.id)}
+className="inline-flex items-center justify-center rounded-md bg-red-500/90 px-2 py-1.5 text-xs font-semibold text-white hover:bg-red-500"
+>
+<Trash2 className="h-3 w-3" />
+</button>
+</div>
+</div>
+</div>
+))}
+</div>
+)}
+
+{/* Edit keterangan modal */}
+{editing && (
+<div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4" onClick={() => setEditing(null)}>
+<div className="bg-white rounded-2xl shadow-card w-full max-w-md p-6" onClick={(e) => e.stopPropagation()}>
+<div className="flex items-center justify-between mb-4">
+<h2 className="font-heading font-bold text-lg text-kir-blue-dark">Edit Keterangan Foto</h2>
+<button onClick={() => setEditing(null)} className="text-muted-foreground hover:text-foreground">
+<X className="h-5 w-5" />
+</button>
+</div>
+<div className="space-y-2">
+<Label className="font-semibold">Keterangan</Label>
+<Textarea
+value={editing.keterangan}
+maxLength={300}
+rows={3}
+onChange={(e) => setEditing({ ...editing, keterangan: e.target.value })}
+placeholder="Tuliskan keterangan foto..."
+/>
+</div>
+<div className="flex gap-3 mt-5">
+<Button variant="outline" onClick={() => setEditing(null)} className="flex-1">Batal</Button>
+<Button onClick={handleSaveKeterangan} className="flex-1 btn-kir-gradient text-white">Simpan</Button>
+</div>
+</div>
+</div>
+)}
+</div>
+);
+}
+src/pages/admin/AdminProfil.jsx
+import React, { useState, useEffect } from "react";
+import { Loader2, Save, CheckCircle2 } from "lucide-react";
+import { base44 } from "@/api/base44Client";
+import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { DEFAULT_PROFIL } from "@/lib/kir-constants";
+
+export default function AdminProfil() {
+const [form, setForm] = useState(DEFAULT_PROFIL);
+const [recordId, setRecordId] = useState(null);
+const [loading, setLoading] = useState(true);
+const [saving, setSaving] = useState(false);
+const [saved, setSaved] = useState(false);
+
+useEffect(() => {
+base44.entities.ProfilOrganisasi
+.filter({}, { limit: 1 })
+.then((p) => {
+if (p.items && p.items.length > 0) {
+const r = p.items[0];
+setRecordId(r.id);
+setForm({
+deskripsi: r.deskripsi || "",
+visi: r.visi || "",
+misi: r.misi || "",
+keunggulan: r.keunggulan || "",
+});
+}
+})
+.catch(() => {})
+.finally(() => setLoading(false));
+}, []);
+
+const handleSave = async (e) => {
+e.preventDefault();
+setSaving(true);
+setSaved(false);
+try {
+if (recordId) {
+await base44.entities.ProfilOrganisasi.update(recordId, form);
+} else {
+const created = await base44.entities.ProfilOrganisasi.create(form);
+setRecordId(created.id);
+}
+setSaved(true);
+setTimeout(() => setSaved(false), 3000);
+} catch (err) {
+alert("Gagal menyimpan: " + (err?.message || "error"));
+} finally {
+setSaving(false);
+}
+};
+
+if (loading) {
+return <div className="h-64 rounded-2xl bg-muted animate-pulse" />;
+}
+
+const fields = [
+{ key: "deskripsi", label: "Deskripsi Organisasi", rows: 4, hint: "Deskripsi singkat tentang KIR SMANCA." },
+{ key: "visi", label: "Visi", rows: 3, hint: "Visi organisasi." },
+{ key: "misi", label: "Misi", rows: 5, hint: "Misi organisasi (satu poin per baris)." },
+{ key: "keunggulan", label: "Keunggulan Organisasi", rows: 4, hint: "Keunggulan (satu poin per baris)." },
+];
+
+return (
+<div className="space-y-5 max-w-3xl">
+<div>
+<h1 className="font-heading font-extrabold text-2xl text-kir-blue-dark">Profil Organisasi</h1>
+<p className="text-sm text-muted-foreground mt-1">
+Perubahan otomatis tampil pada halaman publik Profil KIR.
+</p>
+</div>
+
+<form onSubmit={handleSave} className="rounded-2xl bg-white border border-border shadow-soft p-6 sm:p-8 space-y-5">
+{fields.map((f) => (
+<div key={f.key} className="space-y-2">
+<Label className="font-semibold">{f.label}</Label>
+<Textarea
+value={form[f.key]}
+maxLength={1000}
+rows={f.rows}
+onChange={(e) => setForm({ ...form, [f.key]: e.target.value })}
+/>
+<p className="text-xs text-muted-foreground">{f.hint}</p>
+</div>
+))}
+
+<div className="flex items-center gap-3 pt-2">
+<Button type="submit" disabled={saving} className="btn-kir-gradient text-white">
+{saving ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Save className="h-4 w-4 mr-2" />}
+{saving ? "Menyimpan..." : "Simpan Profil"}
+</Button>
+{saved && (
+<span className="inline-flex items-center gap-1.5 text-sm font-semibold text-green-600">
+<CheckCircle2 className="h-4 w-4" /> Tersimpan
+</span>
+)}
+</div>
+</form>
+</div>
+);
+}
+src/pages/admin/AdminInformasi.jsx
+import React, { useState, useEffect } from "react";
+import { Loader2, Save, CheckCircle2 } from "lucide-react";
+import { base44 } from "@/api/base44Client";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { DEFAULT_PENGATURAN, INSTAGRAM_URL } from "@/lib/kir-constants";
+
+export default function AdminInformasi() {
+const [form, setForm] = useState(DEFAULT_PENGATURAN);
+const [recordId, setRecordId] = useState(null);
+const [loading, setLoading] = useState(true);
+const [saving, setSaving] = useState(false);
+const [saved, setSaved] = useState(false);
+
+useEffect(() => {
+base44.entities.PengaturanWebsite
+.filter({}, { limit: 1 })
+.then((p) => {
+if (p.items && p.items.length > 0) {
+const r = p.items[0];
+setRecordId(r.id);
+setForm({
+judul_website: r.judul_website || "",
+deskripsi_hero: r.deskripsi_hero || "",
+info_pendaftaran: r.info_pendaftaran || "",
+info_kontak: r.info_kontak || "",
+instagram: r.instagram || INSTAGRAM_URL,
+footer_text: r.footer_text || "",
+});
+}
+})
+.catch(() => {})
+.finally(() => setLoading(false));
+}, []);
+
+const handleSave = async (e) => {
+e.preventDefault();
+setSaving(true);
+setSaved(false);
+try {
+if (recordId) {
+await base44.entities.PengaturanWebsite.update(recordId, form);
+} else {
+const created = await base44.entities.PengaturanWebsite.create(form);
+setRecordId(created.id);
+}
+setSaved(true);
+setTimeout(() => setSaved(false), 3000);
+} catch (err) {
+alert("Gagal menyimpan: " + (err?.message || "error"));
+} finally {
+setSaving(false);
+}
+};
+
+if (loading) {
+return <div className="h-64 rounded-2xl bg-muted animate-pulse" />;
+}
+
+return (
+<div className="space-y-5 max-w-3xl">
+<div>
+<h1 className="font-heading font-extrabold text-2xl text-kir-blue-dark">Informasi Website</h1>
+<p className="text-sm text-muted-foreground mt-1">
+Atur konten yang tampil pada website publik. Perubahan otomatis tersinkronisasi.
+</p>
+</div>
+
+<form onSubmit={handleSave} className="rounded-2xl bg-white border border-border shadow-soft p-6 sm:p-8 space-y-5">
+<div className="space-y-2">
+<Label className="font-semibold">Judul Website</Label>
+<Input
+value={form.judul_website}
+maxLength={100}
+onChange={(e) => setForm({ ...form, judul_website: e.target.value })}
+className="h-11"
+/>
+</div>
+<div className="space-y-2">
+<Label className="font-semibold">Deskripsi Hero (Beranda)</Label>
+<Textarea
+value={form.deskripsi_hero}
+maxLength={600}
+rows={4}
+onChange={(e) => setForm({ ...form, deskripsi_hero: e.target.value })}
+/>
+</div>
+<div className="space-y-2">
+<Label className="font-semibold">Informasi Pendaftaran</Label>
+<Textarea
+value={form.info_pendaftaran}
+maxLength={600}
+rows={3}
+onChange={(e) => setForm({ ...form, info_pendaftaran: e.target.value })}
+/>
+</div>
+<div className="space-y-2">
+<Label className="font-semibold">Informasi Kontak</Label>
+<Textarea
+value={form.info_kontak}
+maxLength={600}
+rows={3}
+onChange={(e) => setForm({ ...form, info_kontak: e.target.value })}
+/>
+</div>
+<div className="space-y-2">
+<Label className="font-semibold">URL Instagram Resmi</Label>
+<Input
+type="url"
+value={form.instagram}
+maxLength={300}
+onChange={(e) => setForm({ ...form, instagram: e.target.value })}
+className="h-11"
+/>
+<p className="text-xs text-muted-foreground">Hanya Instagram. Jangan tambahkan email atau media sosial lain.</p>
+</div>
+<div className="space-y-2">
+<Label className="font-semibold">Teks Footer</Label>
+<Input
+value={form.footer_text}
+maxLength={300}
+onChange={(e) => setForm({ ...form, footer_text: e.target.value })}
+className="h-11"
+/>
+</div>
+
+<div className="flex items-center gap-3 pt-2">
+<Button type="submit" disabled={saving} className="btn-kir-gradient text-white">
+{saving ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Save className="h-4 w-4 mr-2" />}
+{saving ? "Menyimpan..." : "Simpan Informasi"}
+</Button>
+{saved && (
+<span className="inline-flex items-center gap-1.5 text-sm font-semibold text-green-600">
+<CheckCircle2 className="h-4 w-4" /> Tersimpan
+</span>
+)}
+</div>
+</form>
+</div>
+);
+}
+src/pages/admin/AdminPengaturan.jsx
+import React, { useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { User, KeyRound, LogOut, Info, ShieldCheck } from "lucide-react";
+import { base44 } from "@/api/base44Client";
+import { useAuth } from "@/lib/AuthContext";
+import { Button } from "@/components/ui/button";
+import { NAMA_ORGANISASI, NAMA_SEKOLAH } from "@/lib/kir-constants";
+
+export default function AdminPengaturan() {
+const { user } = useAuth();
+const navigate = useNavigate();
+const [resetting, setResetting] = useState(false);
+const [resetSent, setResetSent] = useState(false);
+
+const handleLogout = () => {
+base44.auth.logout("/admin/login");
+};
+
+const handleChangePassword = async () => {
+if (!user?.email) {
+navigate("/forgot-password");
+return;
+}
+if (!window.confirm(`Email reset password akan dikirim ke ${user.email}. Lanjutkan?`)) return;
+setResetting(true);
+try {
+await base44.auth.resetPasswordRequest(user.email);
+setResetSent(true);
+} catch (e) {
+// Selalu tampilkan sukses generik (API menyembunyikan keberadaan email)
+setResetSent(true);
+} finally {
+setResetting(false);
+}
+};
+
+return (
+<div className="space-y-5 max-w-3xl">
+<div>
+<h1 className="font-heading font-extrabold text-2xl text-kir-blue-dark">Pengaturan</h1>
+<p className="text-sm text-muted-foreground mt-1">Profil admin, keamanan, dan informasi sistem.</p>
+</div>
+
+{/* Profil admin */}
+<div className="rounded-2xl bg-white border border-border shadow-soft p-6">
+<div className="flex items-center gap-2 mb-4">
+<User className="h-5 w-5 text-kir-blue" />
+<h2 className="font-heading font-bold text-base text-kir-blue-dark">Profil Admin</h2>
+</div>
+<dl className="space-y-3 text-sm">
+<div className="flex justify-between">
+<dt className="text-muted-foreground">Email</dt>
+<dd className="font-semibold text-foreground">{user?.email || "—"}</dd>
+</div>
+<div className="flex justify-between">
+<dt className="text-muted-foreground">Peran</dt>
+<dd className="font-semibold text-foreground capitalize">{user?.role || "admin"}</dd>
+</div>
+<div className="flex justify-between">
+<dt className="text-muted-foreground">Nama</dt>
+<dd className="font-semibold text-foreground">{user?.full_name || "—"}</dd>
+</div>
+</dl>
+</div>
+
+{/* Keamanan */}
+<div className="rounded-2xl bg-white border border-border shadow-soft p-6">
+<div className="flex items-center gap-2 mb-4">
+<ShieldCheck className="h-5 w-5 text-kir-red" />
+<h2 className="font-heading font-bold text-base text-kir-blue-dark">Keamanan</h2>
+</div>
+<div className="flex flex-col sm:flex-row sm:items-center gap-3">
+<Button variant="outline" onClick={handleChangePassword} disabled={resetting} className="border-kir-blue/40 text-kir-blue hover:bg-kir-blue/10">
+<KeyRound className="h-4 w-4 mr-2" />
+{resetting ? "Memproses..." : "Ganti Password"}
+</Button>
+{resetSent && (
+<p className="text-sm text-green-600 font-semibold">
+Tautan reset password telah dikirim ke email Anda (jika akun terdaftar).
+</p>
+)}
+</div>
+<p className="text-xs text-muted-foreground mt-3">
+Ganti password dilakukan melalui email reset yang aman dari platform.
+</p>
+<div className="mt-5 pt-5 border-t border-border">
+<Button variant="outline" onClick={handleLogout} className="text-destructive border-destructive/40 hover:bg-destructive/10">
+<LogOut className="h-4 w-4 mr-2" /> Logout
+</Button>
+</div>
+</div>
+
+{/* Informasi sistem */}
+<div className="rounded-2xl bg-white border border-border shadow-soft p-6">
+<div className="flex items-center gap-2 mb-4">
+<Info className="h-5 w-5 text-kir-blue" />
+<h2 className="font-heading font-bold text-base text-kir-blue-dark">Informasi Sistem</h2>
+</div>
+<dl className="space-y-3 text-sm">
+<div className="flex justify-between">
+<dt className="text-muted-foreground">Nama Organisasi</dt>
+<dd className="font-semibold text-foreground">{NAMA_ORGANISASI}</dd>
+</div>
+<div className="flex justify-between">
+<dt className="text-muted-foreground">Sekolah</dt>
+<dd className="font-semibold text-foreground">{NAMA_SEKOLAH}</dd>
+</div>
+<div className="flex justify-between">
+<dt className="text-muted-foreground">Platform</dt>
+<dd className="font-semibold text-foreground">Base44 (React + Backend bawaan)</dd>
+</div>
+<div className="flex justify-between">
+<dt className="text-muted-foreground">Versi</dt>
+<dd className="font-semibold text-foreground">1.0.0</dd>
+</div>
+</dl>
+</div>
+</div>
+);
+}
+Konfigurasi tampilan
+src/index.css (bagian token warna KIR)
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@600;700;800&display=swap');
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+:root {
+--background: 0 0% 100%;
+--foreground: 210 29% 24%;
+--card: 0 0% 100%;
+--card-foreground: 210 29% 24%;
+--popover: 0 0% 100%;
+--popover-foreground: 210 29% 24%;
+--primary: 0 62% 51%;
+--primary-foreground: 0 0% 100%;
+--secondary: 210 68% 46%;
+--secondary-foreground: 0 0% 100%;
+--muted: 210 20% 96%;
+--muted-foreground: 210 10% 45%;
+--accent: 45 97% 58%;
+--accent-foreground: 210 29% 24%;
+--destructive: 0 72% 51%;
+--destructive-foreground: 0 0% 100%;
+--border: 210 16% 90%;
+--input: 210 16% 90%;
+--ring: 210 68% 46%;
+--radius: 0.75rem;
+--kir-red: 0 62% 51%;
+--kir-red-dark: 0 55% 43%;
+--kir-blue: 210 68% 46%;
+--kir-blue-dark: 210 60% 38%;
+--kir-yellow: 45 97% 58%;
+--kir-cream: 40 30% 94%;
+--font-heading: 'Plus Jakarta Sans', ui-sans-serif, system-ui, sans-serif;
+--font-body: 'Inter', ui-sans-serif, system-ui, sans-serif;
+--font-display: 'Plus Jakarta Sans', ui-sans-serif, system-ui, sans-serif;
+/* ...token sidebar dll. */
+}
+}
+
+@layer utilities {
+.hero-gradient { background: linear-gradient(135deg, hsl(var(--kir-red)) 0%, hsl(var(--kir-blue)) 100%); }
+.btn-kir-gradient { background: linear-gradient(135deg, hsl(var(--kir-red)) 0%, hsl(var(--kir-blue)) 100%); }
+.text-gradient-kir { background: linear-gradient(135deg, hsl(var(--kir-red)) 0%, hsl(var(--kir-blue)) 100%); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; }
+.shadow-soft { box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05); }
+.shadow-card { box-shadow: 0 8px 30px rgba(0, 0, 0, 0.08); }
+}
+
+
